@@ -273,6 +273,7 @@ MODULES   += uuid
 MODULES   += debug_cmd
 MODULES   += ctrl_tcp
 MODULES   += b2bua
+MODULES   += sync_b2bua
 
 ifneq ($(HAVE_LIBMQTT),)
 MODULES   += mqtt

@@ -103,6 +103,18 @@ const char *account_call_transfer(const struct account *acc);
 
 double aulevel_calc_dbov(const int16_t *sampv, size_t sampc);
 
+/*
+ * SFU Call
+ */
+
+struct sfu_call;
+
+int sfu_call_alloc(struct sfu_call **callp, bool offerer);
+int sfu_call_sdp_debug(const struct sfu_call *call, bool offer);
+int sfu_call_sdp_get(const struct sfu_call *call, struct mbuf **desc, bool offer);
+int sfu_call_accept(struct sfu_call *call, struct mbuf *desc, bool offer);
+struct audio *sfu_call_audio(const struct sfu_call *call);
+void sfu_audio_start(const struct sfu_call *call);
 
 /*
  * Call
