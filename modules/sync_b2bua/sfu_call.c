@@ -1,0 +1,198 @@
+/**
+ * @file sfu_call.c SFU call state
+ *
+ * Copyright (C) 2018 46labs
+ */
+#include <string.h>
+#include <re.h>
+#include <baresip.h>
+
+#include "../src/core.h"
+
+struct sfu_call {
+	struct sdp_session *sdp; /**< SDP Session  */
+	struct audio *audio;     /**< Audio stream */
+};
+
+static void sfu_call_destructor(void *arg)
+{
+	struct sfu_call *call = arg;
+
+	audio_stop(call->audio);
+
+	mem_deref(call->audio);
+	mem_deref(call->sdp);
+}
+
+int sfu_call_sdp_get(const struct sfu_call *call, struct mbuf **desc, bool offer)
+{
+	int err;
+
+	err = sdp_encode(desc, call->sdp, offer);
+	if (err) {
+		warning("sfu_call: sdp_encode failed (%m)\n", err);
+		goto out;
+	}
+
+ out:
+	return err;
+}
+
+int sfu_call_sdp_debug(const struct sfu_call *call, bool offer)
+{
+	struct mbuf *desc;
+	int err;
+
+	err = sfu_call_sdp_get(call, &desc, offer);
+	if (err) {
+		goto out;
+	}
+
+	info("- - - - - S D P - %s - - - - -\n"
+	     "%b"
+	     "- - - - - - - - - - - - - - - - - - -\n",
+	     offer ? "O f f e r" : "A n s w e r", desc->buf, desc->end);
+
+	mem_deref(desc);
+
+ out:
+	return err;
+}
+
+
+/**
+ * Allocate a new SFU Call state object
+ *
+ * @param callp       Pointer to allocated SFU Call state object
+ * @param offerer     Boolean
+ *
+ * @return 0 if success, otherwise errorcode
+ */
+int sfu_call_alloc(struct sfu_call **callp, bool offerer)
+{
+	const struct network *net = baresip_network();
+	const struct config *cfg = conf_config();
+	struct sfu_call *call;
+	struct stream_param stream_prm;
+
+	/* TODO: make 'af' be an option */
+	struct sa laddr;
+	int af = AF_INET;
+	int err;
+
+	debug("sfu_call_alloc\n");
+
+	memset(&stream_prm, 0, sizeof(stream_prm));
+	stream_prm.use_rtp = true;
+
+	call = mem_zalloc(sizeof(*call), sfu_call_destructor);
+	if (!call)
+		return ENOMEM;
+
+	sa_cpy(&laddr, net_laddr_af(net, af));
+
+	/* Init SDP info */
+	err = sdp_session_alloc(&call->sdp, &laddr);
+	if (err)
+		goto out;
+
+	err = audio_alloc(&call->audio, &stream_prm,
+			cfg,
+			NULL /* call */, call->sdp, 0 /* SDP label */,
+			NULL /* mnat */, NULL /* mnat_sess */,
+			NULL /* menc */, NULL /* menc_sess */,
+			20 /* ptime */, baresip_aucodecl(), offerer,
+			NULL /* audio_event_h */, NULL /* audio_err_h */, call);
+	if (err) {
+		warning("sfu_call: audio_alloc failed (%m)\n", err);
+		goto out;
+	}
+
+	*callp = call;
+
+ out:
+	if (err)
+		mem_deref(call);
+
+	return err;
+}
+
+/**
+ * Get the audio object for the current call
+ *
+ * @param sfu_call  SFU Call object
+ *
+ * @return Audio object
+ */
+struct audio *sfu_call_audio(const struct sfu_call *call)
+{
+	debug("sfu_call_audio\n");
+
+	return call ? call->audio : NULL;
+}
+
+/**
+ * Accept a call. Provide the remote SDP
+ */
+int sfu_call_accept(struct sfu_call *call, struct mbuf *desc, bool offer)
+{
+	int err;
+
+	debug("sfu_call_accept\n");
+
+	err = sdp_decode(call->sdp, desc, offer);
+	if (err) {
+		warning("b2bua: audio_start failed (%m)\n", err);
+		goto out;
+	}
+
+	sfu_audio_start(call);
+
+ out:
+	return err;
+}
+
+/**
+ * Start audio object
+ */
+void sfu_audio_start(const struct sfu_call *call)
+{
+	const struct sdp_format *sc;
+	int err;
+
+	debug("sfu_audio_start\n");
+
+	/* media attributes */
+	audio_sdp_attr_decode(call->audio);
+
+	sc = sdp_media_rformat(stream_sdpmedia(audio_strm(call->audio)), NULL);
+	if (sc) {
+		struct aucodec *ac = sc->data;
+
+		if (ac) {
+			err  = audio_encoder_set(call->audio, sc->data, sc->pt, sc->params);
+			if (err) {
+				warning("call: start: audio_encoder_set error: %m\n", err);
+			}
+			err |= audio_decoder_set(call->audio, sc->data, sc->pt, sc->params);
+			if (err) {
+				warning("call: start: audio_decoder_set error: %m\n", err);
+			}
+
+			if (!err) {
+				err = audio_start(call->audio);
+				if (err) {
+					warning("call: start: audio_start error: %m\n", err);
+				}
+			}
+		}
+		else {
+			info("call: no common audio-codecs..\n");
+		}
+	}
+	else {
+		info("call: audio stream is disabled..\n");
+	}
+
+	stream_update(audio_strm(call->audio));
+}

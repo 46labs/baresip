@@ -282,6 +282,7 @@ MODULES   += presence
 MODULES   += selfview
 MODULES   += srtp
 MODULES   += stun
+MODULES   += sync_b2bua
 MODULES   += turn
 MODULES   += uuid
 MODULES   += vidbridge
