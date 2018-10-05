@@ -5,6 +5,6 @@
 #
 
 MOD		:= sync_b2bua
-$(MOD)_SRCS	+= sync_b2bua.c sfu_call.c
+$(MOD)_SRCS	+= sync_b2bua.c sfu_call.c rtp_parameters.c
 
 include mk/mod.mk
