@@ -8,6 +8,7 @@
 #include <baresip.h>
 
 #include "../src/core.h"
+#include "rtp_parameters.h"
 
 struct sfu_call {
 	char *id;                /**< SFU call id */
@@ -24,6 +25,13 @@ static void sfu_call_destructor(void *arg)
 	mem_deref(call->id);
 	mem_deref(call->audio);
 	mem_deref(call->sdp);
+}
+
+static int print_handler(const char *p, size_t size, void *arg)
+{
+	struct mbuf *mb = arg;
+
+	return mbuf_write_mem(mb, (uint8_t *)p, size);
 }
 
 int sfu_call_sdp_get(const struct sfu_call *call, struct mbuf **desc, bool offer)
@@ -61,16 +69,39 @@ int sfu_call_sdp_debug(const struct sfu_call *call, bool offer)
 	return err;
 }
 
+int sfu_call_sdp_media_debug(const struct sfu_call *call)
+{
+	struct mbuf *mb = mbuf_alloc(2048);
+	struct re_printf pf = {print_handler, mb};
+	int err;
+
+	err = sdp_media_debug(&pf, stream_sdpmedia(audio_strm(call->audio)));
+
+	info("%b", mb->buf, mb->end);
+
+	mem_deref(mb);
+
+	return err;
+}
+
+int sfu_call_get_lrtp_parameters(struct sfu_call *call, struct odict **od)
+{
+	struct sdp_media *m;
+
+	m = stream_sdpmedia(audio_strm(call->audio));
+
+	return get_lrtp_parameters(m, od);
+}
 
 /**
  * Allocate a new SFU Call state object
  *
  * @param callp       Pointer to allocated SFU Call state object
- * @param offerer     Boolean
+ * @param offer     Boolean
  *
  * @return 0 if success, otherwise errorcode
  */
-int sfu_call_alloc(struct sfu_call **callp, const char* id, bool offerer)
+int sfu_call_alloc(struct sfu_call **callp, const char* id, bool offer)
 {
 	const struct network *net = baresip_network();
 	const struct config *cfg = conf_config();
@@ -107,7 +138,7 @@ int sfu_call_alloc(struct sfu_call **callp, const char* id, bool offerer)
 			NULL /* call */, call->sdp, 0 /* SDP label */,
 			NULL /* mnat */, NULL /* mnat_sess */,
 			NULL /* menc */, NULL /* menc_sess */,
-			20 /* ptime */, baresip_aucodecl(), offerer,
+			20 /* ptime */, baresip_aucodecl(), offer,
 			NULL /* audio_event_h */, NULL /* audio_err_h */, call);
 	if (err) {
 		warning("sfu_call: audio_alloc failed (%m)\n", err);

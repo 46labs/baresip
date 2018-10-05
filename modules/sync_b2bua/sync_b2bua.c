@@ -3,8 +3,11 @@
  *
  * Copyright (C) 2018 46labs
  */
+#include <string.h>
 #include <re.h>
 #include <baresip.h>
+
+#include "rtp_parameters.h"
 
 /**
  * @defgroup sfu_b2bua sfu_b2bua
@@ -40,7 +43,7 @@ static void destructor(void *arg)
 {
 	struct session *sess = arg;
 
-	debug("b2bua: session destroyed (in=%p, out=%p)\n",
+	debug("sync_b2bua: session destroyed (in=%p, out=%p)\n",
 	      sess->sip_call, sess->sfu_call);
 
 	list_unlink(&sess->le);
@@ -53,6 +56,34 @@ static void destructor(void *arg)
 }
 
 
+static struct session *get_session_by_sip_callid(const char* id)
+{
+	struct le *le;
+
+	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
+		struct session *sess = le->data;
+
+		if (sess->sip_call && !strcmp(call_id(sess->sip_call), id))
+			return sess;
+	}
+
+	return NULL;
+}
+
+static struct session *get_session_by_sfu_callid(const char* id)
+{
+	struct le *le;
+
+	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
+		struct session *sess = le->data;
+
+		if (sess->sfu_call && !strcmp(sfu_call_id(sess->sfu_call), id))
+			return sess;
+	}
+
+	return NULL;
+}
+
 static void call_event_handler(struct call *call, enum call_event ev,
 			       const char *str, void *arg)
 {
@@ -61,12 +92,12 @@ static void call_event_handler(struct call *call, enum call_event ev,
 	switch (ev) {
 
 	case CALL_EVENT_ESTABLISHED:
-		debug("b2bua: CALL_ESTABLISHED: peer_uri=%s\n",
+		debug("sync_b2bua: CALL_ESTABLISHED: peer_uri=%s\n",
 		      call_peeruri(call));
 		break;
 
 	case CALL_EVENT_CLOSED:
-		debug("b2bua: CALL_CLOSED: %s\n", str);
+		debug("sync_b2bua: CALL_CLOSED: %s\n", str);
 
 		mem_deref(sess);
 		break;
@@ -82,15 +113,13 @@ static void call_dtmf_handler(struct call *call, char key, void *arg)
 	(void)call;
 	(void)arg;
 
-	debug("b2bua: received DTMF event: key = '%c'\n", key ? key : '.');
+	debug("sync_b2bua: received DTMF event: key = '%c'\n", key ? key : '.');
 }
 
 
 static int new_session(struct call *call)
 {
 	struct session *sess;
-	char a[64], b[64];
-	int err;
 
 	sess = mem_zalloc(sizeof(*sess), destructor);
 	if (!sess)
@@ -98,28 +127,100 @@ static int new_session(struct call *call)
 
 	sess->sip_call = call;
 
+	call_set_handlers(sess->sip_call, call_event_handler,
+			  call_dtmf_handler, sess);
+
 	ua_answer(call_get_ua(call), call);
 
-	// Create a SFU call.
-	err = sfu_call_alloc(&sess->sfu_call, true /* offerer */);
+	list_append(&sessionl, &sess->le, sess);
 
-#if 1
-	sfu_call_sdp_debug(sess->sfu_call, true /* offerer */);
+	return 0;
+}
 
-	struct mbuf *desc;
+/**
+ * Connect a SFU call with a SIP call
+ *
+ * @param pf        Response message print handler
+ * @param arg       JSON
+ *
+ * @param [id]         (char*) ID for the SFU call to be created.
+ * @param [sip_callid] (char*) callid of the SIP call related to this object.
+ * @param [desc]       (char*) SDP answer.
+ *
+ * @return 0 if success, otherwise errorcode
+ */
+static int sfu_call_connect(struct re_printf *pf, void *arg)
+{
+	const struct cmd_arg *carg = arg;
+	const char *param = carg->prm;
+	struct odict *od = NULL;
+	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
+	struct mbuf *mb = NULL;
+	struct session *sess;
+	char a[64], b[64];
+	int err;
 
-	// Get the local SDP.
-	sfu_call_sdp_get(sess->sfu_call, &desc, true);
+	(void)pf;
 
-	// Accept the call with the same SDP, as it was remote.
-	sfu_call_accept(sess->sfu_call, desc, false);
+	// retrieve command params.
+	err = json_decode_odict(&od, 32, param, str_len(param), 16);
 	if (err) {
-		warning("b2bua: sfu_call_accept failed (%m)\n", err);
+		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
 		goto out;
 	}
 
-	mem_deref(desc);
-#endif
+	oe_id = odict_lookup(od, "id");
+	oe_sip_callid = odict_lookup(od, "sip_callid");
+	oe_desc = odict_lookup(od, "sdp");
+	if (!oe_id || !oe_sip_callid || !oe_desc) {
+		warning("sync_b2bua: missing json entries\n");
+		goto out;
+	}
+
+	debug("sync_b2bua: sfu_cal_connect:  id='%s', sip_callid:'%s'\n",
+	      oe_id ? oe_id->u.str : "", oe_sip_callid ? oe_sip_callid->u.str : "");
+
+	// check that SFU call exist for the given id.
+	sess = get_session_by_sfu_callid(oe_id->u.str);
+	if (!sess) {
+		warning("sync_b2bua: no session exists for the given SFU call id: %s\n",
+				oe_id->u.str);
+		err = EINVAL;
+		goto out;
+	}
+
+	// check that SIP call exist for the given SIP callid.
+	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+	if (!sess) {
+		warning("sync_b2bua: no session found for the given callid: %s\n",
+				oe_sip_callid->u.str);
+		err = EINVAL;
+		goto out;
+	}
+
+	mb = mbuf_alloc(4096);
+	if (!mb) {
+		err = ENOMEM;
+		goto out;
+	}
+
+	err = mbuf_write_mem(mb, (uint8_t *)oe_desc->u.str, str_len(oe_desc->u.str));
+	if (err)
+		return err;
+
+	// create a SFU call.
+	err = sfu_call_alloc(&sess->sfu_call, oe_id->u.str, false /* offer */);
+	if (err) {
+		warning("sync_b2bua: sfu_call_alloc failed (%m)\n", err);
+		goto out;
+	}
+
+	// accept the call with the remote SDP.
+	sfu_call_accept(sess->sfu_call, mb, true /* offer */);
+	if (err) {
+		warning("sync_b2bua: sfu_call_accept failed (%m)\n", err);
+		goto out;
+	}
 
 	re_snprintf(a, sizeof(a), "A-%x", sess);
 	re_snprintf(b, sizeof(b), "B-%x", sess);
@@ -128,18 +229,102 @@ static int new_session(struct call *call)
 	audio_set_devicename(call_audio(sess->sip_call), a, b);
 	audio_set_devicename(sfu_call_audio(sess->sfu_call), b, a);
 
-	call_set_handlers(sess->sip_call, call_event_handler,
-			  call_dtmf_handler, sess);
-
-	list_append(&sessionl, &sess->le, sess);
+	// TODO: prepare response.
 
  out:
 	if (err)
 		mem_deref(sess);
 
+	if (mb)
+		mem_deref(mb);
+
+	mem_deref(od);
+
 	return err;
 }
 
+/**
+ * Create a SFU call state object
+ *
+ * @param pf        Response message print handler
+ * @param arg       JSON
+ *
+ * @param [id]         (char*) ID for the SFU call to be created.
+ * @param [sip_callid] (char*) callid of the SIP call related to this object.
+ *
+ * @return 0 if success, otherwise errorcode
+ */
+static int sfu_call_create(struct re_printf *pf, void *arg)
+{
+	const struct cmd_arg *carg = arg;
+	const char *param = carg->prm;
+	struct odict *od = NULL;
+	struct odict *od_rtp_params = NULL;
+	const struct odict_entry *oe_id, *oe_sip_callid;
+	struct session *sess = NULL;
+	int err;
+
+	// retrieve command params.
+	err = json_decode_odict(&od, 32, param, str_len(param), 16);
+	if (err) {
+		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+		goto out;
+	}
+
+	oe_id = odict_lookup(od, "id");
+	oe_sip_callid = odict_lookup(od, "sip_callid");
+	if (!oe_id || !oe_sip_callid) {
+		warning("sync_b2bua: missing json entries\n");
+		goto out;
+	}
+
+	debug("sync_b2bua: sfu_call_create: id='%s', sip_callid:'%s'\n",
+			oe_id ? oe_id->u.str : "",
+			oe_sip_callid ? oe_sip_callid->u.str : "");
+
+	// check that no SFU call exists for the given id.
+	sess = get_session_by_sfu_callid(oe_id->u.str);
+	if (sess) {
+		warning("sync_b2bua: session exists for the given SFU callid: %s\n",
+			oe_id->u.str);
+		return EINVAL;
+	}
+
+	// check that a SIP call exists for the given SIP callid.
+	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+	if (!sess) {
+		warning("sync_b2bua: no session exist for the given SIP callid: %s\n",
+				oe_sip_callid->u.str);
+		return EINVAL;
+	}
+
+	// create a SFU call.
+	err = sfu_call_alloc(&sess->sfu_call, oe_id->u.str, true /* offer */);
+	if (err) {
+		warning("sync_b2bua: sfu_call_alloc failed (%m)\n", err);
+		goto out;
+	}
+
+	// prepare response.
+	err = sfu_call_get_lrtp_parameters(sess->sfu_call, &od_rtp_params);
+	if (err)
+		goto out;
+
+	err = json_encode_odict(pf, od_rtp_params);
+	if (err) {
+		warning("sync_b2bua: failed to encode json (%m)\n", err);
+		goto out;
+	}
+
+ out:
+	if (err)
+		mem_deref(sess);
+
+	mem_deref(od);
+	mem_deref(od_rtp_params);
+
+	return err;
+}
 
 static void ua_event_handler(struct ua *ua, enum ua_event ev,
 			     struct call *call, const char *prm, void *arg)
@@ -151,8 +336,8 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 	switch (ev) {
 
 	case UA_EVENT_CALL_INCOMING:
-		debug("b2bua: CALL_INCOMING: peer=%s  -->  local=%s\n",
-		      call_peeruri(call), call_localuri(call));
+		debug("sync_b2bua: CALL_INCOMING: peer=%s  -->  local=%s. id=%s\n",
+		      call_peeruri(call), call_localuri(call), call_id(call));
 
 		err = new_session(call);
 		if (err) {
@@ -166,7 +351,7 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 }
 
 
-static int b2bua_status(struct re_printf *pf, void *arg)
+static int sfu_b2bua_status(struct re_printf *pf, void *arg)
 {
 	struct le *le;
 	int err = 0;
@@ -194,7 +379,12 @@ static int b2bua_status(struct re_printf *pf, void *arg)
 
 
 static const struct cmd cmdv[] = {
-	{"b2bua", 0,       0, "b2bua status", b2bua_status },
+	{"sfu_b2bua_status" , 0, 0      , "sfu_b2bua_status" , sfu_b2bua_status },
+	{"sfu_call_create"  , 0, CMD_PRM, "sfu_call_create"  , sfu_call_create  },
+	{"sfu_call_connect" , 0, CMD_PRM, "sfu_call_connect" , sfu_call_connect },
+	// mixer_source_add(desc, [sip_call_id])
+	// {"mixer_source_add" , 0, CMD_PRM, "mixer_source_add" , mixer_source_add },
+	// {"mixer_source_remove" , 0, CMD_PRM, "mixer_source_remove" , mixer_source_remove },
 };
 
 
@@ -205,7 +395,7 @@ static int module_init(void)
 	ua_in  = uag_find_param("b2bua", "inbound");
 
 	if (!ua_in) {
-		warning("b2bua: inbound UA not found\n");
+		warning("sync_b2bua: inbound UA not found\n");
 		return ENOENT;
 	}
 
@@ -220,7 +410,7 @@ static int module_init(void)
 	/* The inbound UA will handle all non-matching requests */
 	ua_set_catchall(ua_in, true);
 
-	debug("b2bua: module loaded\n");
+	debug("sync_b2bua: module loaded\n");
 
 	return 0;
 }
@@ -228,11 +418,11 @@ static int module_init(void)
 
 static int module_close(void)
 {
-	debug("b2bua: module closing..\n");
+	debug("sync_b2bua: module closing..\n");
 
 	if (!list_isempty(&sessionl)) {
 
-		info("b2bua: flushing %u sessions\n", list_count(&sessionl));
+		info("sync_b2bua: flushing %u sessions\n", list_count(&sessionl));
 		list_flush(&sessionl);
 	}
 
