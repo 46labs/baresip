@@ -10,6 +10,7 @@
 #include "../src/core.h"
 
 struct sfu_call {
+	char *id;                /**< SFU call id */
 	struct sdp_session *sdp; /**< SDP Session  */
 	struct audio *audio;     /**< Audio stream */
 };
@@ -20,6 +21,7 @@ static void sfu_call_destructor(void *arg)
 
 	audio_stop(call->audio);
 
+	mem_deref(call->id);
 	mem_deref(call->audio);
 	mem_deref(call->sdp);
 }
@@ -68,7 +70,7 @@ int sfu_call_sdp_debug(const struct sfu_call *call, bool offer)
  *
  * @return 0 if success, otherwise errorcode
  */
-int sfu_call_alloc(struct sfu_call **callp, bool offerer)
+int sfu_call_alloc(struct sfu_call **callp, const char* id, bool offerer)
 {
 	const struct network *net = baresip_network();
 	const struct config *cfg = conf_config();
@@ -88,6 +90,10 @@ int sfu_call_alloc(struct sfu_call **callp, bool offerer)
 	call = mem_zalloc(sizeof(*call), sfu_call_destructor);
 	if (!call)
 		return ENOMEM;
+
+	err = str_dup(&call->id, id);
+	if (err)
+		return err;
 
 	sa_cpy(&laddr, net_laddr_af(net, af));
 
@@ -130,6 +136,12 @@ struct audio *sfu_call_audio(const struct sfu_call *call)
 
 	return call ? call->audio : NULL;
 }
+
+const char *sfu_call_id(const struct sfu_call *call)
+{
+	return call ? call->id : NULL;
+}
+
 
 /**
  * Accept a call. Provide the remote SDP
