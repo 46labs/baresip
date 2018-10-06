@@ -86,11 +86,7 @@ int sfu_call_sdp_media_debug(const struct sfu_call *call)
 
 int sfu_call_get_lrtp_parameters(struct sfu_call *call, struct odict **od)
 {
-	struct sdp_media *m;
-
-	m = stream_sdpmedia(audio_strm(call->audio));
-
-	return get_lrtp_parameters(m, od);
+	return get_lrtp_parameters(call->audio, od);
 }
 
 /**
