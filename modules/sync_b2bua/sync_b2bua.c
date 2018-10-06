@@ -305,6 +305,9 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
+	// TMP
+	sfu_call_sdp_media_debug(sess->sfu_call);
+
 	// prepare response.
 	err = sfu_call_get_lrtp_parameters(sess->sfu_call, &od_rtp_params);
 	if (err)
