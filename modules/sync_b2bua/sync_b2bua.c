@@ -7,6 +7,7 @@
 #include <re.h>
 #include <baresip.h>
 
+#include "sfu_call.h"
 #include "rtp_parameters.h"
 
 /**
