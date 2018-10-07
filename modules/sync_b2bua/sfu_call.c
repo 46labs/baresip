@@ -8,6 +8,7 @@
 #include <baresip.h>
 
 #include "../src/core.h"
+#include "sfu_call.h"
 #include "rtp_parameters.h"
 
 struct sfu_call {
