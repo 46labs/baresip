@@ -90,6 +90,38 @@ int sfu_call_get_lrtp_parameters(struct sfu_call *call, struct odict **od)
 	return get_lrtp_parameters(call->audio, od);
 }
 
+int sfu_call_get_lrtp_transport(struct sfu_call *call, struct odict **od_rtp_transport)
+{
+	const struct network *net = baresip_network();
+	char addr[64];
+	struct odict *od;
+	struct sa laddr;
+	struct sdp_media *m;
+	int err;
+
+	err = odict_alloc(&od, 64);
+	if (err)
+		goto out;
+
+	sa_cpy(&laddr, net_laddr_af(net, net_af(net)));
+
+	// retrieve IP address.
+	err |= sa_ntop(&laddr, addr, sizeof(addr));
+	err |= odict_entry_add(od, "ip", ODICT_STRING, addr);
+	if (err)
+		goto out;
+
+	// retrieve port.
+	m = stream_sdpmedia(audio_strm(call->audio));
+	err |= odict_entry_add(od, "port", ODICT_INT, sa_port(sdp_media_laddr(m)));
+
+ out:
+	if (!err)
+		*od_rtp_transport = od;
+
+	return err;
+}
+
 /**
  * Allocate a new SFU Call state object
  *
@@ -104,10 +136,7 @@ int sfu_call_alloc(struct sfu_call **callp, const char* id, bool offer)
 	const struct config *cfg = conf_config();
 	struct sfu_call *call;
 	struct stream_param stream_prm;
-
-	/* TODO: make 'af' be an option */
 	struct sa laddr;
-	int af = AF_INET;
 	int err;
 
 	debug("sfu_call_alloc\n");
@@ -123,7 +152,7 @@ int sfu_call_alloc(struct sfu_call **callp, const char* id, bool offer)
 	if (err)
 		return err;
 
-	sa_cpy(&laddr, net_laddr_af(net, af));
+	sa_cpy(&laddr, net_laddr_af(net, net_af(net)));
 
 	/* Init SDP info */
 	err = sdp_session_alloc(&call->sdp, &laddr);
