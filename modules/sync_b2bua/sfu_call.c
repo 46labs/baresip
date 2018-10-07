@@ -101,7 +101,7 @@ int sfu_call_get_lrtp_transport(struct sfu_call *call, struct odict **od_rtp_tra
 
 	err = odict_alloc(&od, 64);
 	if (err)
-		goto out;
+		return err;
 
 	sa_cpy(&laddr, net_laddr_af(net, net_af(net)));
 
@@ -116,6 +116,9 @@ int sfu_call_get_lrtp_transport(struct sfu_call *call, struct odict **od_rtp_tra
 	err |= odict_entry_add(od, "port", ODICT_INT, sa_port(sdp_media_laddr(m)));
 
  out:
+	if (err)
+		mem_deref(od);
+
 	if (!err)
 		*od_rtp_transport = od;
 
