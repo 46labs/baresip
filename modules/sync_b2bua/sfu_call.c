@@ -206,17 +206,20 @@ const char *sfu_call_id(const struct sfu_call *call)
 /**
  * Accept a call. Provide the remote SDP
  */
-int sfu_call_accept(struct sfu_call *call, struct mbuf *desc, bool offer)
+int sfu_call_accept(struct sfu_call *call, struct odict *od)
 {
 	int err;
 
 	debug("sfu_call_accept\n");
 
-	err = sdp_decode(call->sdp, desc, offer);
+	err = set_rrtp_parameters(call->audio, od);
 	if (err) {
-		warning("b2bua: audio_start failed (%m)\n", err);
+		warning("b2bua: set_rrtp_parameters failed (%m)\n", err);
 		goto out;
 	}
+
+	// TMP
+	sfu_call_sdp_media_debug(call);
 
 	sfu_audio_start(call);
 
