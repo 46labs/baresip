@@ -155,8 +155,7 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od = NULL;
-	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
-	struct mbuf *mb = NULL;
+	const struct odict_entry *oe_id, *oe_sip_callid, *oe_rtp_params;
 	struct session *sess;
 	char a[64], b[64];
 	int err;
@@ -172,8 +171,8 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 
 	oe_id = odict_lookup(od, "id");
 	oe_sip_callid = odict_lookup(od, "sip_callid");
-	oe_desc = odict_lookup(od, "sdp");
-	if (!oe_id || !oe_sip_callid || !oe_desc) {
+	oe_rtp_params = odict_lookup(od, "rtp_params");
+	if (!oe_id || !oe_sip_callid || !oe_rtp_params) {
 		warning("sync_b2bua: missing json entries\n");
 		goto out;
 	}
@@ -199,25 +198,9 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	mb = mbuf_alloc(4096);
-	if (!mb) {
-		err = ENOMEM;
-		goto out;
-	}
-
-	err = mbuf_write_mem(mb, (uint8_t *)oe_desc->u.str, str_len(oe_desc->u.str));
-	if (err)
-		return err;
-
-	// create a SFU call.
-	err = sfu_call_alloc(&sess->sfu_call, oe_id->u.str, false /* offer */);
-	if (err) {
-		warning("sync_b2bua: sfu_call_alloc failed (%m)\n", err);
-		goto out;
-	}
-
-	// accept the call with the remote SDP.
-	sfu_call_accept(sess->sfu_call, mb, true /* offer */);
+	// accept the call with the remote rtp parameters.
+	// TODO: Missing rtp transport...
+	sfu_call_accept(sess->sfu_call, oe_rtp_params->u.odict);
 	if (err) {
 		warning("sync_b2bua: sfu_call_accept failed (%m)\n", err);
 		goto out;
@@ -235,9 +218,6 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
  out:
 	if (err)
 		mem_deref(sess);
-
-	if (mb)
-		mem_deref(mb);
 
 	mem_deref(od);
 
@@ -336,6 +316,9 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 		warning("sync_b2bua: failed to encode json (%m)\n", err);
 		goto out;
 	}
+
+	// TMP: accept the call with the local offer.
+	sfu_call_accept(sess->sfu_call, od_rtp_params);
 
  out:
 	if (err)

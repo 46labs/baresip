@@ -9,6 +9,10 @@
 #include "../src/core.h"
 #include "rtp_parameters.h"
 
+/* external declarations */
+int sdp_format_radd(struct sdp_media *m, const struct pl *id);
+struct sdp_format *sdp_format_find(const struct list *lst, const struct pl *id);
+
 static const char *uri_aulevel = "urn:ietf:params:rtp-hdrext:ssrc-audio-level";
 
 /**
@@ -172,4 +176,82 @@ int get_lrtp_parameters(struct audio *audio, struct odict **od_rtp_params)
 		*od_rtp_params = od;
 
 	return err;
+}
+
+int set_rrtp_parameters(struct audio *audio, const struct odict *od)
+{
+	struct sdp_media *m;
+	const struct odict *codecs, *encodings, *header_extensions, *rtcp;
+	const struct odict_entry *oe_c, *oe_e, *oe_he, *oe_rtcp;
+	const struct list *rfmtl;
+	struct le *le;
+	int err = 0;
+
+	// validate parameters.
+	oe_c = odict_lookup(od, "codecs");
+	oe_e = odict_lookup(od, "encodings");
+	oe_he = odict_lookup(od, "headerExtensions");
+	oe_rtcp = odict_lookup(od, "rtcp");
+
+	if (!oe_c|| !oe_e|| !oe_he || !oe_rtcp) {
+		warning("invalid rtp parameters");
+		return EINVAL;
+	}
+
+	codecs = oe_c->u.odict;
+	encodings = oe_e->u.odict;
+	header_extensions = oe_he->u.odict;
+	rtcp = oe_rtcp->u.odict;
+
+	m = stream_sdpmedia(audio_strm(audio));
+
+	// get remote sdp format list.
+	rfmtl = sdp_media_format_lst(m, false /*local*/);
+
+	// reset current format entries.
+	list_flush((struct list*)rfmtl);
+
+	// add 'fmt' entries.
+	for (le=codecs->lst.head; le; le=le->next) {
+
+		struct sdp_format *fmt;
+		struct odict *codec = ((struct odict_entry*)le->data)->u.odict;
+		struct pl pl;
+		char pt[4];
+
+		if (!odict_lookup(codec, "payloadType")) {
+			err = EINVAL;
+			goto out;
+		}
+
+		re_snprintf(pt, sizeof(pt), "%d",
+				(int)odict_lookup(codec, "payloadType")->u.integer);
+
+		pl.p = pt;
+		pl.l = str_len(pt);
+
+		sdp_format_radd(m, &pl);
+		fmt = sdp_format_find(rfmtl, &pl);
+		if (!fmt) {
+			err = EINVAL;
+			goto out;
+		}
+
+		str_dup(&fmt->name, odict_lookup(codec, "name")->u.str);
+
+		fmt->ch = odict_lookup(codec, "channels")->u.integer;
+		fmt->srate = (uint32_t)odict_lookup(codec, "clockRate")->u.integer;
+		fmt->pt = (int)odict_lookup(codec, "payloadType")->u.integer;
+
+		// TODO: complete fmt->parameters by iterating code.parameters
+		// We need to know the type of each parameter.
+		// Special behaviour must be taken for each codec.
+	}
+
+ out:
+	// mem_deref created fmt entries.
+	if (err)
+		list_flush((struct list*)rfmtl);
+
+		return err;
 }
