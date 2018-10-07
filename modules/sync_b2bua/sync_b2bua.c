@@ -312,7 +312,7 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 	sfu_call_sdp_media_debug(sess->sfu_call);
 
 	// prepare response.
-	err = odict_alloc(&od_resp, 1024);
+	err = odict_alloc(&od_resp, 2);
 	if (err)
 		return err;
 

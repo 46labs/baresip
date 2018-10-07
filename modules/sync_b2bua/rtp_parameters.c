@@ -55,7 +55,7 @@ int get_lrtp_parameters(struct audio *audio, struct odict **od_rtp_params)
 
 	m = stream_sdpmedia(audio_strm(audio));
 
-	err = odict_alloc(&od, 64);
+	err = odict_alloc(&od, 4);
 	err |= odict_alloc(&codecs, 8);
 	err |= odict_alloc(&encodings, 8);
 	err |= odict_alloc(&header_extensions, 8);
@@ -81,7 +81,7 @@ int get_lrtp_parameters(struct audio *audio, struct odict **od_rtp_params)
 
 		re_snprintf(mime_type, sizeof(mime_type), "audio/%s", fmt->name);
 
-		err = odict_alloc(&codec, 16);
+		err = odict_alloc(&codec, 8);
 		err |= odict_alloc(&parameters, 8);
 		err |= odict_alloc(&rtcp_feedback, 8);
 
@@ -112,7 +112,7 @@ int get_lrtp_parameters(struct audio *audio, struct odict **od_rtp_params)
 		struct odict *encoding;
 		uint32_t ssrc = rtp_sess_ssrc(audio_strm(audio)->rtp);
 
-		err = odict_alloc(&encoding, 16);
+		err = odict_alloc(&encoding, 1);
 		err |= odict_entry_add(encoding, "ssrc", ODICT_INT, ssrc);
 
 		err |= odict_entry_add(encodings, "", ODICT_OBJECT, encoding);
@@ -128,7 +128,7 @@ int get_lrtp_parameters(struct audio *audio, struct odict **od_rtp_params)
 		const struct config *cfg = conf_config();
 		struct odict *header_extension;
 
-		err = odict_alloc(&header_extension, 16);
+		err = odict_alloc(&header_extension, 8);
 		if (err)
 			goto out;
 

@@ -99,7 +99,7 @@ int sfu_call_get_lrtp_transport(struct sfu_call *call, struct odict **od_rtp_tra
 	struct sdp_media *m;
 	int err;
 
-	err = odict_alloc(&od, 64);
+	err = odict_alloc(&od, 2);
 	if (err)
 		return err;
 
