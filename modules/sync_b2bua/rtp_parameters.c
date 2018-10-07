@@ -11,6 +11,39 @@
 
 static const char *uri_aulevel = "urn:ietf:params:rtp-hdrext:ssrc-audio-level";
 
+/**
+ * Opus codec parameters
+ *
+ * based on modules/opus.c
+ */
+static int get_opus_paramameters(struct odict *od)
+{
+	struct conf *conf = conf_cur();
+	uint32_t value;
+	bool b, stereo = true, sprop_stereo = true;
+	int err;
+
+	conf_get_bool(conf, "opus_stereo", &stereo);
+	conf_get_bool(conf, "opus_sprop_stereo", &sprop_stereo);
+
+	err = odict_entry_add(od, "stereo", ODICT_INT, stereo);
+	err |= odict_entry_add(od, "sprop-stereo", ODICT_INT, sprop_stereo);
+
+	if (0 == conf_get_u32(conf, "opus_bitrate", &value))
+		err |= odict_entry_add(od, "maxaveragebitrate", ODICT_INT, value);
+
+	if (0 == conf_get_bool(conf, "opus_cbr", &b))
+		err |= odict_entry_add(od, "cbr", ODICT_INT, b);
+
+	if (0 == conf_get_bool(conf, "opus_inbandfec", &b))
+		err |= odict_entry_add(od, "useinbandfec", ODICT_INT, b);
+
+	if (0 == conf_get_bool(conf, "opus_dtx", &b))
+		err |= odict_entry_add(od, "usedtx", ODICT_INT, b);
+
+	return err;
+}
+
 int get_lrtp_parameters(struct audio *audio, struct odict **od_rtp_params)
 {
 	struct sdp_media *m;
@@ -59,6 +92,10 @@ int get_lrtp_parameters(struct audio *audio, struct odict **od_rtp_params)
 		err |= odict_entry_add(codec, "parameters", ODICT_OBJECT, parameters);
 		err |= odict_entry_add(codec, "payloadType", ODICT_INT, fmt->pt);
 		err |= odict_entry_add(codec, "rtcpFeedback", ODICT_ARRAY, rtcp_feedback);
+
+		// fill parameters.
+		if (!str_cmp(fmt->name, "opus"))
+			err |= get_opus_paramameters(parameters);
 
 		err |= odict_entry_add(codecs, "", ODICT_OBJECT, codec);
 
