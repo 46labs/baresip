@@ -260,7 +260,9 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od = NULL;
+	struct odict *od_resp = NULL;
 	struct odict *od_rtp_params = NULL;
+	struct odict *od_rtp_transport = NULL;
 	const struct odict_entry *oe_id, *oe_sip_callid;
 	struct session *sess = NULL;
 	int err;
@@ -310,11 +312,26 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 	sfu_call_sdp_media_debug(sess->sfu_call);
 
 	// prepare response.
-	err = sfu_call_get_lrtp_parameters(sess->sfu_call, &od_rtp_params);
+	err = odict_alloc(&od_resp, 1024);
 	if (err)
-		goto out;
+		return err;
 
-	err = json_encode_odict(pf, od_rtp_params);
+	err |= sfu_call_get_lrtp_parameters(sess->sfu_call, &od_rtp_params);
+	if (err) {
+		warning("sync_b2bua: failed to retrieve rtp_parameters (%m)\n", err);
+		goto out;
+	}
+
+	err |= sfu_call_get_lrtp_transport(sess->sfu_call, &od_rtp_transport);
+	if (err) {
+		warning("sync_b2bua: failed to retrieve rtp_transport (%m)\n", err);
+		goto out;
+	}
+
+	err |= odict_entry_add(od_resp, "rtpParameters", ODICT_OBJECT, od_rtp_params);
+	err |= odict_entry_add(od_resp, "rtpTransport", ODICT_OBJECT, od_rtp_transport);
+
+	err = json_encode_odict(pf, od_resp);
 	if (err) {
 		warning("sync_b2bua: failed to encode json (%m)\n", err);
 		goto out;
@@ -325,7 +342,9 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 		mem_deref(sess);
 
 	mem_deref(od);
+	mem_deref(od_resp);
 	mem_deref(od_rtp_params);
+	mem_deref(od_rtp_transport);
 
 	return err;
 }
