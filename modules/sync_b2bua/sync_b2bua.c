@@ -174,8 +174,13 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 	oe_rtp_params = odict_lookup(od, "rtp_params");
 	if (!oe_id || !oe_sip_callid || !oe_rtp_params) {
 		warning("sync_b2bua: missing json entries\n");
+		err = EINVAL;
 		goto out;
 	}
+
+	err = validate_rtp_parameters(oe_rtp_params->u.odict);
+	if (err)
+		goto out;
 
 	debug("sync_b2bua: sfu_cal_connect:  id='%s', sip_callid:'%s'\n",
 	      oe_id ? oe_id->u.str : "", oe_sip_callid ? oe_sip_callid->u.str : "");
