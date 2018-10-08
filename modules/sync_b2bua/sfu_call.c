@@ -35,6 +35,17 @@ static int print_handler(const char *p, size_t size, void *arg)
 	return mbuf_write_mem(mb, (uint8_t *)p, size);
 }
 
+static int set_rrtp_transport(struct audio *audio, const struct odict *od)
+{
+	struct sdp_media *m;
+
+	m = stream_sdpmedia(audio_strm(audio));
+
+	return sa_set_str((struct sa*)sdp_media_raddr(m),
+			odict_lookup(od, "ip")->u.str,
+			odict_lookup(od, "port")->u.integer);
+}
+
 int sfu_call_sdp_get(const struct sfu_call *call, struct mbuf **desc, bool offer)
 {
 	int err;
@@ -206,15 +217,23 @@ const char *sfu_call_id(const struct sfu_call *call)
 /**
  * Accept a call. Provide the remote SDP
  */
-int sfu_call_accept(struct sfu_call *call, struct odict *od)
+int sfu_call_accept(struct sfu_call *call, struct odict *rtp_params, struct odict *rtp_transport)
 {
 	int err;
 
 	debug("sfu_call_accept\n");
 
-	err = set_rrtp_parameters(call->audio, od);
+	// set RTP parameters.
+	err = set_rrtp_parameters(call->audio, rtp_params);
 	if (err) {
 		warning("b2bua: set_rrtp_parameters failed (%m)\n", err);
+		goto out;
+	}
+
+	// set RTP transport.
+	err = set_rrtp_transport(call->audio, rtp_transport);
+	if (err) {
+		warning("b2bua: set_rrtp_transport failed (%m)\n", err);
 		goto out;
 	}
 

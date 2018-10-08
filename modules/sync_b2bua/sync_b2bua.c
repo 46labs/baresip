@@ -155,7 +155,7 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od = NULL;
-	const struct odict_entry *oe_id, *oe_sip_callid, *oe_rtp_params;
+	const struct odict_entry *oe_id, *oe_sip_callid, *oe_rtp_params, *oe_rtp_transport;
 	struct session *sess;
 	char a[64], b[64];
 	int err;
@@ -172,7 +172,8 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 	oe_id = odict_lookup(od, "id");
 	oe_sip_callid = odict_lookup(od, "sip_callid");
 	oe_rtp_params = odict_lookup(od, "rtp_params");
-	if (!oe_id || !oe_sip_callid || !oe_rtp_params) {
+	oe_rtp_transport = odict_lookup(od, "rtp_transport");
+	if (!oe_id || !oe_sip_callid || !oe_rtp_params || !oe_rtp_transport) {
 		warning("sync_b2bua: missing json entries\n");
 		err = EINVAL;
 		goto out;
@@ -181,6 +182,8 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 	err = validate_rtp_parameters(oe_rtp_params->u.odict);
 	if (err)
 		goto out;
+
+	// TODO: validate rtp_transport
 
 	debug("sync_b2bua: sfu_cal_connect:  id='%s', sip_callid:'%s'\n",
 	      oe_id ? oe_id->u.str : "", oe_sip_callid ? oe_sip_callid->u.str : "");
@@ -204,8 +207,7 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 	}
 
 	// accept the call with the remote rtp parameters.
-	// TODO: Missing rtp transport...
-	sfu_call_accept(sess->sfu_call, oe_rtp_params->u.odict);
+	sfu_call_accept(sess->sfu_call, oe_rtp_params->u.odict, oe_rtp_transport->u.odict);
 	if (err) {
 		warning("sync_b2bua: sfu_call_accept failed (%m)\n", err);
 		goto out;
@@ -323,7 +325,7 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 	}
 
 	// TMP: accept the call with the local offer.
-	sfu_call_accept(sess->sfu_call, od_rtp_params);
+	sfu_call_accept(sess->sfu_call, od_rtp_params, od_rtp_transport);
 
  out:
 	if (err)
