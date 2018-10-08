@@ -9,6 +9,9 @@
 #include "../src/core.h"
 #include "rtp_parameters.h"
 
+#define FOREACH_ELEMENT(dict)					\
+	for (le = dict->u.odict->lst.head; le; le=le->next)
+
 /* external declarations */
 int sdp_format_radd(struct sdp_media *m, const struct pl *id);
 struct sdp_format *sdp_format_find(const struct list *lst, const struct pl *id);
@@ -16,11 +19,11 @@ struct sdp_format *sdp_format_find(const struct list *lst, const struct pl *id);
 static const char *uri_aulevel = "urn:ietf:params:rtp-hdrext:ssrc-audio-level";
 
 /**
- * Opus codec parameters
+ * encode opus codec parameters
  *
  * based on modules/opus.c
  */
-static int get_opus_paramameters(struct odict *od)
+static int encode_opus_paramameters(struct odict *od)
 {
 	struct conf *conf = conf_cur();
 	uint32_t value;
@@ -46,6 +49,118 @@ static int get_opus_paramameters(struct odict *od)
 		err |= odict_entry_add(od, "usedtx", ODICT_INT, b);
 
 	return err;
+}
+
+/**
+ * decode opus codec parameters
+ *
+ * based on modules/opus.c
+ */
+static int decode_opus_paramameters(char *params, size_t len, const struct odict_entry *od)
+{
+	char *p;
+	int n = 0;
+	struct odict_entry *oe;
+	struct le *le;
+
+	p = params;
+
+	FOREACH_ELEMENT(od) {
+		oe = (struct odict_entry*)le->data;
+
+		if (!str_len(params)) {
+			n = re_snprintf(p, len - str_len(p),
+					"%s=%d", oe->key, oe->u.integer);
+		}
+		else {
+			n = re_snprintf(p, len - str_len(p),
+					";%s=%d", oe->key, oe->u.integer);
+		}
+
+		if (n <= 0)
+			return ENOMEM;
+
+		p += n;
+	}
+
+	return 0;
+}
+
+static int validate_codec(struct odict *od)
+{
+	if (!odict_lookup(od, "channels") ||
+			odict_lookup(od, "channels")->type != ODICT_INT)
+		return EINVAL;
+
+	if (!odict_lookup(od, "clockRate") ||
+			odict_lookup(od, "clockRate")->type != ODICT_INT)
+		return EINVAL;
+
+	if (!odict_lookup(od, "mimeType") ||
+			odict_lookup(od, "mimeType")->type != ODICT_STRING)
+		return EINVAL;
+
+	if (!odict_lookup(od, "name") ||
+			odict_lookup(od, "name")->type != ODICT_STRING)
+		return EINVAL;
+
+	if (!odict_lookup(od, "parameters") ||
+			odict_lookup(od, "parameters")->type != ODICT_OBJECT)
+		return EINVAL;
+
+	if (!odict_lookup(od, "payloadType") ||
+			odict_lookup(od, "payloadType")->type != ODICT_INT)
+		return EINVAL;
+
+	if (!odict_lookup(od, "rtpFeedback") ||
+			odict_lookup(od, "rtpFeedback")->type != ODICT_ARRAY)
+		return EINVAL;
+
+	return 0;
+}
+
+int validate_rtp_parameters(const struct odict *od)
+{
+	const struct odict_entry *codecs, *encodings, *header_extensions, *rtcp;
+	struct le *le;
+	int err;
+
+	// validate codecs.
+	codecs = odict_lookup(od, "codecs");
+	if (!codecs || codecs->type != ODICT_ARRAY)
+		return EINVAL;
+
+	FOREACH_ELEMENT(codecs) {
+		err = validate_codec(((struct odict_entry*)le->data)->u.odict);
+		if (err) {
+			warning("invalid codec entry\n");
+			return EINVAL;
+		}
+	}
+
+	// validate encodings.
+	encodings = odict_lookup(od, "encodings");
+	if (!encodings || encodings->type != ODICT_ARRAY)
+		return EINVAL;
+
+	FOREACH_ELEMENT(encodings) {
+	}
+
+	// validate header extensions.
+	header_extensions = odict_lookup(od, "headerExtensions");
+	if (!header_extensions || header_extensions->type != ODICT_ARRAY)
+		return EINVAL;
+
+	FOREACH_ELEMENT(header_extensions) {
+	}
+
+	// validate rtcp.
+	rtcp = odict_lookup(od, "rtcp");
+	if (!rtcp || rtcp->type != ODICT_OBJECT)
+		return EINVAL;
+
+
+	return 0;
 }
 
 int get_lrtp_parameters(struct audio *audio, struct odict **od_rtp_params)
@@ -99,7 +214,7 @@ int get_lrtp_parameters(struct audio *audio, struct odict **od_rtp_params)
 
 		// fill parameters.
 		if (!str_cmp(fmt->name, "opus"))
-			err |= get_opus_paramameters(parameters);
+			err |= encode_opus_paramameters(parameters);
 
 		err |= odict_entry_add(codecs, "", ODICT_OBJECT, codec);
 
@@ -181,27 +296,9 @@ int get_lrtp_parameters(struct audio *audio, struct odict **od_rtp_params)
 int set_rrtp_parameters(struct audio *audio, const struct odict *od)
 {
 	struct sdp_media *m;
-	const struct odict *codecs, *encodings, *header_extensions, *rtcp;
-	const struct odict_entry *oe_c, *oe_e, *oe_he, *oe_rtcp;
 	const struct list *rfmtl;
 	struct le *le;
 	int err = 0;
-
-	// validate parameters.
-	oe_c = odict_lookup(od, "codecs");
-	oe_e = odict_lookup(od, "encodings");
-	oe_he = odict_lookup(od, "headerExtensions");
-	oe_rtcp = odict_lookup(od, "rtcp");
-
-	if (!oe_c|| !oe_e|| !oe_he || !oe_rtcp) {
-		warning("invalid rtp parameters");
-		return EINVAL;
-	}
-
-	codecs = oe_c->u.odict;
-	encodings = oe_e->u.odict;
-	header_extensions = oe_he->u.odict;
-	rtcp = oe_rtcp->u.odict;
 
 	m = stream_sdpmedia(audio_strm(audio));
 
@@ -212,17 +309,12 @@ int set_rrtp_parameters(struct audio *audio, const struct odict *od)
 	list_flush((struct list*)rfmtl);
 
 	// add 'fmt' entries.
-	for (le=codecs->lst.head; le; le=le->next) {
-
-		struct sdp_format *fmt;
+	FOREACH_ELEMENT(odict_lookup(od, "codecs")) {
 		struct odict *codec = ((struct odict_entry*)le->data)->u.odict;
+		struct sdp_format *fmt;
 		struct pl pl;
 		char pt[4];
-
-		if (!odict_lookup(codec, "payloadType")) {
-			err = EINVAL;
-			goto out;
-		}
+		char params[255];
 
 		re_snprintf(pt, sizeof(pt), "%d",
 				(int)odict_lookup(codec, "payloadType")->u.integer);
@@ -243,9 +335,15 @@ int set_rrtp_parameters(struct audio *audio, const struct odict *od)
 		fmt->srate = (uint32_t)odict_lookup(codec, "clockRate")->u.integer;
 		fmt->pt = (int)odict_lookup(codec, "payloadType")->u.integer;
 
-		// TODO: complete fmt->parameters by iterating code.parameters
-		// We need to know the type of each parameter.
-		// Special behaviour must be taken for each codec.
+		// fill parameters.
+		if (!str_cmp(fmt->name, "opus")) {
+			err |= decode_opus_paramameters(
+					params, sizeof(params), odict_lookup(codec, "parameters"));
+			if (err)
+				goto out;
+
+			sdp_format_set_params(fmt, params);
+		}
 	}
 
  out:
