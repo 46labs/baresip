@@ -8,7 +8,6 @@
 #include <baresip.h>
 
 #include "sfu_call.h"
-#include "rtp_parameters.h"
 
 /**
  * @defgroup sfu_b2bua sfu_b2bua
@@ -155,7 +154,8 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od = NULL;
-	const struct odict_entry *oe_id, *oe_sip_callid, *oe_rtp_params, *oe_rtp_transport;
+	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
+	struct mbuf *mb;
 	struct session *sess;
 	char a[64], b[64];
 	int err;
@@ -171,19 +171,12 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 
 	oe_id = odict_lookup(od, "id");
 	oe_sip_callid = odict_lookup(od, "sip_callid");
-	oe_rtp_params = odict_lookup(od, "rtp_params");
-	oe_rtp_transport = odict_lookup(od, "rtp_transport");
-	if (!oe_id || !oe_sip_callid || !oe_rtp_params || !oe_rtp_transport) {
+	oe_desc = odict_lookup(od, "desc");
+	if (!oe_id || !oe_sip_callid || !oe_desc) {
 		warning("sync_b2bua: missing json entries\n");
 		err = EINVAL;
 		goto out;
 	}
-
-	err = validate_rtp_parameters(oe_rtp_params->u.odict);
-	if (err)
-		goto out;
-
-	// TODO: validate rtp_transport
 
 	debug("sync_b2bua: sfu_cal_connect:  id='%s', sip_callid:'%s'\n",
 	      oe_id ? oe_id->u.str : "", oe_sip_callid ? oe_sip_callid->u.str : "");
@@ -206,8 +199,15 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
+	// copy the SDP string into a memory buffer.
+	mb = mbuf_alloc(str_len(oe_desc->u.str));
+	if (mb) {
+		err = ENOMEM;
+		goto out;
+	}
+
 	// accept the call with the remote rtp parameters.
-	sfu_call_accept(sess->sfu_call, oe_rtp_params->u.odict, oe_rtp_transport->u.odict);
+	sfu_call_accept(sess->sfu_call, mb, false);
 	if (err) {
 		warning("sync_b2bua: sfu_call_accept failed (%m)\n", err);
 		goto out;
@@ -248,9 +248,9 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 	const char *param = carg->prm;
 	struct odict *od = NULL;
 	struct odict *od_resp = NULL;
-	struct odict *od_rtp_params = NULL;
-	struct odict *od_rtp_transport = NULL;
 	const struct odict_entry *oe_id, *oe_sip_callid;
+	struct mbuf *mb = NULL;
+	char *sdp = NULL;
 	struct session *sess = NULL;
 	int err;
 
@@ -299,24 +299,18 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 	sfu_call_sdp_media_debug(sess->sfu_call);
 
 	// prepare response.
-	err = odict_alloc(&od_resp, 2);
+	err = odict_alloc(&od_resp, 1);
 	if (err)
-		return err;
+		goto out;
 
-	err |= sfu_call_get_lrtp_parameters(sess->sfu_call, &od_rtp_params);
+	err |= sfu_call_sdp_get(sess->sfu_call, &mb, true /* offer */);
 	if (err) {
-		warning("sync_b2bua: failed to retrieve rtp_parameters (%m)\n", err);
+		warning("sync_b2bua: failed to get SDP (%m)\n", err);
 		goto out;
 	}
 
-	err |= sfu_call_get_lrtp_transport(sess->sfu_call, &od_rtp_transport);
-	if (err) {
-		warning("sync_b2bua: failed to retrieve rtp_transport (%m)\n", err);
-		goto out;
-	}
-
-	err |= odict_entry_add(od_resp, "rtpParameters", ODICT_OBJECT, od_rtp_params);
-	err |= odict_entry_add(od_resp, "rtpTransport", ODICT_OBJECT, od_rtp_transport);
+	err |= mbuf_strdup(mb, &sdp, mb->end);
+	err |= odict_entry_add(od_resp, "desc", ODICT_STRING, sdp);
 
 	err = json_encode_odict(pf, od_resp);
 	if (err) {
@@ -325,7 +319,7 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 	}
 
 	// TMP: accept the call with the local offer.
-	sfu_call_accept(sess->sfu_call, od_rtp_params, od_rtp_transport);
+	sfu_call_accept(sess->sfu_call, mb, false /* offer */);
 
  out:
 	if (err)
@@ -333,8 +327,9 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 
 	mem_deref(od);
 	mem_deref(od_resp);
-	mem_deref(od_rtp_params);
-	mem_deref(od_rtp_transport);
+
+	mem_deref(mb);
+	mem_deref(sdp);
 
 	return err;
 }
