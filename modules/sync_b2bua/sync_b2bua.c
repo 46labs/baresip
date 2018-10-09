@@ -385,11 +385,41 @@ static int sfu_b2bua_status(struct re_printf *pf, void *arg)
 	return err;
 }
 
+static int rtp_capabilities(struct re_printf *pf, void *arg)
+{
+	struct sfu_call *call;
+	struct mbuf *mb;
+	int err;
+
+	(void)arg;
+
+	err = sfu_call_alloc(&call, "capabilities", true /* offer */);
+	if (err) {
+		warning("sync_b2bua: sfu_call_alloc failed (%m)\n", err);
+		return err;
+	}
+
+
+	err = sfu_call_sdp_get(call, &mb, true /* offer */);
+	if (err) {
+		warning("sync_b2bua: failed to get SDP (%m)\n", err);
+		goto out;
+	}
+
+	err |= re_hprintf(pf, "%b", mb->buf, mb->end);
+
+ out:
+	mem_deref(call);
+	mem_deref(mb);
+
+	return err;
+}
 
 static const struct cmd cmdv[] = {
 	{"sfu_b2bua_status" , 0, 0      , "sfu_b2bua_status" , sfu_b2bua_status },
 	{"sfu_call_create"  , 0, CMD_PRM, "sfu_call_create"  , sfu_call_create  },
 	{"sfu_call_connect" , 0, CMD_PRM, "sfu_call_connect" , sfu_call_connect },
+	{"sfu_rtp_capabilities" , 0, 0, "sfu_rtp_capabilities" , rtp_capabilities },
 	// mixer_source_add(desc, [sip_call_id])
 	// {"mixer_source_add" , 0, CMD_PRM, "mixer_source_add" , mixer_source_add },
 	// {"mixer_source_remove" , 0, CMD_PRM, "mixer_source_remove" , mixer_source_remove },
