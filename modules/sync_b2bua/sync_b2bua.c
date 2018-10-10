@@ -359,7 +359,7 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 }
 
 
-static int nosip_b2bua_status(struct re_printf *pf, void *arg)
+static int sync_b2bua_status(struct re_printf *pf, void *arg)
 {
 	struct le *le;
 	int err = 0;
@@ -416,13 +416,10 @@ static int rtp_capabilities(struct re_printf *pf, void *arg)
 }
 
 static const struct cmd cmdv[] = {
-	{"nosip_b2bua_status" , 0, 0      , "nosip_b2bua_status" , nosip_b2bua_status },
+	{"sync_b2bua_status" , 0, 0      , "sync_b2bua_status" , sync_b2bua_status },
 	{"nosip_call_create"  , 0, CMD_PRM, "nosip_call_create"  , nosip_call_create  },
 	{"nosip_call_connect" , 0, CMD_PRM, "nosip_call_connect" , nosip_call_connect },
 	{"nosip_rtp_capabilities" , 0, 0, "nosip_rtp_capabilities" , rtp_capabilities },
-	// mixer_source_add(desc, [sip_call_id])
-	// {"mixer_source_add" , 0, CMD_PRM, "mixer_source_add" , mixer_source_add },
-	// {"mixer_source_remove" , 0, CMD_PRM, "mixer_source_remove" , mixer_source_remove },
 };
 
 
