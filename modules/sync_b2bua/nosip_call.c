@@ -1,5 +1,5 @@
 /**
- * @file sfu_call.c SFU call state
+ * @file nosip_call.c noSIP call state
  *
  * Copyright (C) 2018 46labs
  */
@@ -8,17 +8,17 @@
 #include <baresip.h>
 
 #include "../src/core.h"
-#include "sfu_call.h"
+#include "nosip_call.h"
 
-struct sfu_call {
-	char *id;                /**< SFU call id */
+struct nosip_call {
+	char *id;                /**< nosip call id */
 	struct sdp_session *sdp; /**< SDP Session  */
 	struct audio *audio;     /**< Audio stream */
 };
 
-static void sfu_call_destructor(void *arg)
+static void nosip_call_destructor(void *arg)
 {
-	struct sfu_call *call = arg;
+	struct nosip_call *call = arg;
 
 	audio_stop(call->audio);
 
@@ -34,13 +34,13 @@ static int print_handler(const char *p, size_t size, void *arg)
 	return mbuf_write_mem(mb, (uint8_t *)p, size);
 }
 
-int sfu_call_sdp_get(const struct sfu_call *call, struct mbuf **desc, bool offer)
+int nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc, bool offer)
 {
 	int err;
 
 	err = sdp_encode(desc, call->sdp, offer);
 	if (err) {
-		warning("sfu_call: sdp_encode failed (%m)\n", err);
+		warning("nosip_call: sdp_encode failed (%m)\n", err);
 		goto out;
 	}
 
@@ -48,12 +48,12 @@ int sfu_call_sdp_get(const struct sfu_call *call, struct mbuf **desc, bool offer
 	return err;
 }
 
-int sfu_call_sdp_debug(const struct sfu_call *call, bool offer)
+int nosip_call_sdp_debug(const struct nosip_call *call, bool offer)
 {
 	struct mbuf *desc;
 	int err;
 
-	err = sfu_call_sdp_get(call, &desc, offer);
+	err = nosip_call_sdp_get(call, &desc, offer);
 	if (err) {
 		goto out;
 	}
@@ -69,7 +69,7 @@ int sfu_call_sdp_debug(const struct sfu_call *call, bool offer)
 	return err;
 }
 
-int sfu_call_sdp_media_debug(const struct sfu_call *call)
+int nosip_call_sdp_media_debug(const struct nosip_call *call)
 {
 	struct mbuf *mb = mbuf_alloc(2048);
 	struct re_printf pf = {print_handler, mb};
@@ -85,28 +85,28 @@ int sfu_call_sdp_media_debug(const struct sfu_call *call)
 }
 
 /**
- * Allocate a new SFU Call state object
+ * Allocate a new nosip Call state object
  *
- * @param callp       Pointer to allocated SFU Call state object
+ * @param callp       Pointer to allocated nosip Call state object
  * @param offer     Boolean
  *
  * @return 0 if success, otherwise errorcode
  */
-int sfu_call_alloc(struct sfu_call **callp, const char* id, bool offer)
+int nosip_call_alloc(struct nosip_call **callp, const char* id, bool offer)
 {
 	const struct network *net = baresip_network();
 	const struct config *cfg = conf_config();
-	struct sfu_call *call;
+	struct nosip_call *call;
 	struct stream_param stream_prm;
 	struct sa laddr;
 	int err;
 
-	debug("sfu_call_alloc\n");
+	debug("nosip_call_alloc\n");
 
 	memset(&stream_prm, 0, sizeof(stream_prm));
 	stream_prm.use_rtp = true;
 
-	call = mem_zalloc(sizeof(*call), sfu_call_destructor);
+	call = mem_zalloc(sizeof(*call), nosip_call_destructor);
 	if (!call)
 		return ENOMEM;
 
@@ -129,7 +129,7 @@ int sfu_call_alloc(struct sfu_call **callp, const char* id, bool offer)
 			20 /* ptime */, baresip_aucodecl(), offer,
 			NULL /* audio_event_h */, NULL /* audio_err_h */, call);
 	if (err) {
-		warning("sfu_call: audio_alloc failed (%m)\n", err);
+		warning("nosip_call: audio_alloc failed (%m)\n", err);
 		goto out;
 	}
 
@@ -145,18 +145,18 @@ int sfu_call_alloc(struct sfu_call **callp, const char* id, bool offer)
 /**
  * Get the audio object for the current call
  *
- * @param sfu_call  SFU Call object
+ * @param nosip_call  nosip Call object
  *
  * @return Audio object
  */
-struct audio *sfu_call_audio(const struct sfu_call *call)
+struct audio *nosip_call_audio(const struct nosip_call *call)
 {
-	debug("sfu_call_audio\n");
+	debug("nosip_call_audio\n");
 
 	return call ? call->audio : NULL;
 }
 
-const char *sfu_call_id(const struct sfu_call *call)
+const char *nosip_call_id(const struct nosip_call *call)
 {
 	return call ? call->id : NULL;
 }
@@ -165,11 +165,11 @@ const char *sfu_call_id(const struct sfu_call *call)
 /**
  * Accept a call. Provide the remote SDP
  */
-int sfu_call_accept(struct sfu_call *call, struct mbuf *desc, bool offer)
+int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
 {
 	int err;
 
-	debug("sfu_call_accept\n");
+	debug("nosip_call_accept\n");
 
 	err = sdp_decode(call->sdp, desc, offer);
 	if (err) {
@@ -177,7 +177,7 @@ int sfu_call_accept(struct sfu_call *call, struct mbuf *desc, bool offer)
 		goto out;
 	}
 
-	sfu_audio_start(call);
+	nosip_audio_start(call);
 
  out:
 	return err;
@@ -186,12 +186,12 @@ int sfu_call_accept(struct sfu_call *call, struct mbuf *desc, bool offer)
 /**
  * Start audio object
  */
-void sfu_audio_start(const struct sfu_call *call)
+void nosip_audio_start(const struct nosip_call *call)
 {
 	const struct sdp_format *sc;
 	int err;
 
-	debug("sfu_audio_start\n");
+	debug("nosip_audio_start\n");
 
 	/* media attributes */
 	audio_sdp_attr_decode(call->audio);
