@@ -7,15 +7,15 @@
 #include <re.h>
 #include <baresip.h>
 
-#include "sfu_call.h"
+#include "nosip_call.h"
 
 /**
- * @defgroup sfu_b2bua sfu_b2bua
+ * @defgroup sync_b2bua sync_b2bua
  *
  * Sync Back-to-Back User-Agent (B2BUA) module
  *
  * N session objects
- * 1 session object has 2 call objects (SIP call, SFU audio object)
+ * 1 session object has 2 call objects (SIP call, noSIP call)
  */
 
 /**
@@ -25,14 +25,14 @@
  *
  * 1. UA_EVENT_CALL_INCOMING event.
  * 2. Module command: connect(call_id, sdp):
- *	- create the sfu_call with the given remote SDP.
- *	- connect SIP call audio with SFU call audio.
+ *	- create the nosip_call with the given remote SDP.
+ *	- connect SIP call audio with nosip call audio.
  */
 
 struct session {
 	struct le le;
 	struct call *sip_call;
-	struct sfu_call *sfu_call;
+	struct nosip_call *nosip_call;
 };
 
 static struct list sessionl;
@@ -44,12 +44,12 @@ static void destructor(void *arg)
 	struct session *sess = arg;
 
 	debug("sync_b2bua: session destroyed (in=%p, out=%p)\n",
-	      sess->sip_call, sess->sfu_call);
+	      sess->sip_call, sess->nosip_call);
 
 	list_unlink(&sess->le);
 
-	if (sess->sfu_call)
-		mem_deref(sess->sfu_call);
+	if (sess->nosip_call)
+		mem_deref(sess->nosip_call);
 
 	if (sess->sip_call)
 		mem_deref(sess->sip_call);
@@ -70,14 +70,14 @@ static struct session *get_session_by_sip_callid(const char* id)
 	return NULL;
 }
 
-static struct session *get_session_by_sfu_callid(const char* id)
+static struct session *get_session_by_nosip_callid(const char* id)
 {
 	struct le *le;
 
 	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
 		struct session *sess = le->data;
 
-		if (sess->sfu_call && !strcmp(sfu_call_id(sess->sfu_call), id))
+		if (sess->nosip_call && !strcmp(nosip_call_id(sess->nosip_call), id))
 			return sess;
 	}
 
@@ -138,18 +138,18 @@ static int new_session(struct call *call)
 }
 
 /**
- * Connect a SFU call with a SIP call
+ * Connect a nosip call with a SIP call
  *
  * @param pf        Response message print handler
  * @param arg       JSON
  *
- * @param [id]         (char*) ID for the SFU call to be created.
+ * @param [id]         (char*) ID for the nosip call to be created.
  * @param [sip_callid] (char*) callid of the SIP call related to this object.
  * @param [desc]       (char*) SDP answer.
  *
  * @return 0 if success, otherwise errorcode
  */
-static int sfu_call_connect(struct re_printf *pf, void *arg)
+static int nosip_call_connect(struct re_printf *pf, void *arg)
 {
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
@@ -178,13 +178,13 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	debug("sync_b2bua: sfu_cal_connect:  id='%s', sip_callid:'%s'\n",
+	debug("sync_b2bua: nosip_cal_connect:  id='%s', sip_callid:'%s'\n",
 	      oe_id ? oe_id->u.str : "", oe_sip_callid ? oe_sip_callid->u.str : "");
 
-	// check that SFU call exist for the given id.
-	sess = get_session_by_sfu_callid(oe_id->u.str);
+	// check that nosip call exist for the given id.
+	sess = get_session_by_nosip_callid(oe_id->u.str);
 	if (!sess) {
-		warning("sync_b2bua: no session exists for the given SFU call id: %s\n",
+		warning("sync_b2bua: no session exists for the given nosip call id: %s\n",
 				oe_id->u.str);
 		err = EINVAL;
 		goto out;
@@ -207,9 +207,9 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 	}
 
 	// accept the call with the remote rtp parameters.
-	sfu_call_accept(sess->sfu_call, mb, false);
+	nosip_call_accept(sess->nosip_call, mb, false);
 	if (err) {
-		warning("sync_b2bua: sfu_call_accept failed (%m)\n", err);
+		warning("sync_b2bua: nosip_call_accept failed (%m)\n", err);
 		goto out;
 	}
 
@@ -218,7 +218,7 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 
 	/* connect the audio/video-bridge devices */
 	audio_set_devicename(call_audio(sess->sip_call), a, b);
-	audio_set_devicename(sfu_call_audio(sess->sfu_call), b, a);
+	audio_set_devicename(nosip_call_audio(sess->nosip_call), b, a);
 
 	// TODO: prepare response.
 
@@ -232,17 +232,17 @@ static int sfu_call_connect(struct re_printf *pf, void *arg)
 }
 
 /**
- * Create a SFU call state object
+ * Create a nosip call state object
  *
  * @param pf        Response message print handler
  * @param arg       JSON
  *
- * @param [id]         (char*) ID for the SFU call to be created.
+ * @param [id]         (char*) ID for the nosip call to be created.
  * @param [sip_callid] (char*) callid of the SIP call related to this object.
  *
  * @return 0 if success, otherwise errorcode
  */
-static int sfu_call_create(struct re_printf *pf, void *arg)
+static int nosip_call_create(struct re_printf *pf, void *arg)
 {
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
@@ -268,14 +268,14 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	debug("sync_b2bua: sfu_call_create: id='%s', sip_callid:'%s'\n",
+	debug("sync_b2bua: nosip_call_create: id='%s', sip_callid:'%s'\n",
 			oe_id ? oe_id->u.str : "",
 			oe_sip_callid ? oe_sip_callid->u.str : "");
 
-	// check that no SFU call exists for the given id.
-	sess = get_session_by_sfu_callid(oe_id->u.str);
+	// check that no nosip call exists for the given id.
+	sess = get_session_by_nosip_callid(oe_id->u.str);
 	if (sess) {
-		warning("sync_b2bua: session exists for the given SFU callid: %s\n",
+		warning("sync_b2bua: session exists for the given nosip callid: %s\n",
 			oe_id->u.str);
 		return EINVAL;
 	}
@@ -288,22 +288,22 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 		return EINVAL;
 	}
 
-	// create a SFU call.
-	err = sfu_call_alloc(&sess->sfu_call, oe_id->u.str, true /* offer */);
+	// create a nosip call.
+	err = nosip_call_alloc(&sess->nosip_call, oe_id->u.str, true /* offer */);
 	if (err) {
-		warning("sync_b2bua: sfu_call_alloc failed (%m)\n", err);
+		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		goto out;
 	}
 
 	// TMP
-	sfu_call_sdp_media_debug(sess->sfu_call);
+	nosip_call_sdp_media_debug(sess->nosip_call);
 
 	// prepare response.
 	err = odict_alloc(&od_resp, 1);
 	if (err)
 		goto out;
 
-	err |= sfu_call_sdp_get(sess->sfu_call, &mb, true /* offer */);
+	err |= nosip_call_sdp_get(sess->nosip_call, &mb, true /* offer */);
 	if (err) {
 		warning("sync_b2bua: failed to get SDP (%m)\n", err);
 		goto out;
@@ -319,7 +319,7 @@ static int sfu_call_create(struct re_printf *pf, void *arg)
 	}
 
 	// TMP: accept the call with the local offer.
-	sfu_call_accept(sess->sfu_call, mb, false /* offer */);
+	nosip_call_accept(sess->nosip_call, mb, false /* offer */);
 
  out:
 	if (err)
@@ -359,7 +359,7 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 }
 
 
-static int sfu_b2bua_status(struct re_printf *pf, void *arg)
+static int nosip_b2bua_status(struct re_printf *pf, void *arg)
 {
 	struct le *le;
 	int err = 0;
@@ -378,8 +378,8 @@ static int sfu_b2bua_status(struct re_printf *pf, void *arg)
 		err |= re_hprintf(pf, "%H\n", call_status, sess->sip_call);
 		err |= re_hprintf(pf, "%H\n", audio_debug, call_audio(sess->sip_call));
 
-		err |= re_hprintf(pf, "SFU call  \n");
-		err |= re_hprintf(pf, "%H\n", audio_debug, sfu_call_audio(sess->sfu_call));
+		err |= re_hprintf(pf, "noSIP call  \n");
+		err |= re_hprintf(pf, "%H\n", audio_debug, nosip_call_audio(sess->nosip_call));
 	}
 
 	return err;
@@ -387,20 +387,20 @@ static int sfu_b2bua_status(struct re_printf *pf, void *arg)
 
 static int rtp_capabilities(struct re_printf *pf, void *arg)
 {
-	struct sfu_call *call;
+	struct nosip_call *call;
 	struct mbuf *mb;
 	int err;
 
 	(void)arg;
 
-	err = sfu_call_alloc(&call, "capabilities", true /* offer */);
+	err = nosip_call_alloc(&call, "capabilities", true /* offer */);
 	if (err) {
-		warning("sync_b2bua: sfu_call_alloc failed (%m)\n", err);
+		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		return err;
 	}
 
 
-	err = sfu_call_sdp_get(call, &mb, true /* offer */);
+	err = nosip_call_sdp_get(call, &mb, true /* offer */);
 	if (err) {
 		warning("sync_b2bua: failed to get SDP (%m)\n", err);
 		goto out;
@@ -416,10 +416,10 @@ static int rtp_capabilities(struct re_printf *pf, void *arg)
 }
 
 static const struct cmd cmdv[] = {
-	{"sfu_b2bua_status" , 0, 0      , "sfu_b2bua_status" , sfu_b2bua_status },
-	{"sfu_call_create"  , 0, CMD_PRM, "sfu_call_create"  , sfu_call_create  },
-	{"sfu_call_connect" , 0, CMD_PRM, "sfu_call_connect" , sfu_call_connect },
-	{"sfu_rtp_capabilities" , 0, 0, "sfu_rtp_capabilities" , rtp_capabilities },
+	{"nosip_b2bua_status" , 0, 0      , "nosip_b2bua_status" , nosip_b2bua_status },
+	{"nosip_call_create"  , 0, CMD_PRM, "nosip_call_create"  , nosip_call_create  },
+	{"nosip_call_connect" , 0, CMD_PRM, "nosip_call_connect" , nosip_call_connect },
+	{"nosip_rtp_capabilities" , 0, 0, "nosip_rtp_capabilities" , rtp_capabilities },
 	// mixer_source_add(desc, [sip_call_id])
 	// {"mixer_source_add" , 0, CMD_PRM, "mixer_source_add" , mixer_source_add },
 	// {"mixer_source_remove" , 0, CMD_PRM, "mixer_source_remove" , mixer_source_remove },
