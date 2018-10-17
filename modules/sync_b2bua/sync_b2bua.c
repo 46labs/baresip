@@ -84,39 +84,6 @@ static struct session *get_session_by_nosip_callid(const char* id)
 	return NULL;
 }
 
-static void call_event_handler(struct call *call, enum call_event ev,
-			       const char *str, void *arg)
-{
-	struct session *sess = arg;
-
-	switch (ev) {
-
-	case CALL_EVENT_ESTABLISHED:
-		debug("sync_b2bua: CALL_ESTABLISHED: peer_uri=%s\n",
-		      call_peeruri(call));
-		break;
-
-	case CALL_EVENT_CLOSED:
-		debug("sync_b2bua: CALL_CLOSED: %s\n", str);
-
-		mem_deref(sess);
-		break;
-
-	default:
-		break;
-	}
-}
-
-
-static void call_dtmf_handler(struct call *call, char key, void *arg)
-{
-	(void)call;
-	(void)arg;
-
-	debug("sync_b2bua: received DTMF event: key = '%c'\n", key ? key : '.');
-}
-
-
 static int new_session(struct call *call)
 {
 	struct session *sess;
@@ -126,9 +93,6 @@ static int new_session(struct call *call)
 		return ENOMEM;
 
 	sess->sip_call = call;
-
-	call_set_handlers(sess->sip_call, call_event_handler,
-			  call_dtmf_handler, sess);
 
 	ua_answer(call_get_ua(call), call);
 
@@ -341,20 +305,45 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 	(void)prm;
 	(void)arg;
 
-	switch (ev) {
-
-	case UA_EVENT_CALL_INCOMING:
-		debug("sync_b2bua: CALL_INCOMING: peer=%s  -->  local=%s. id=%s\n",
-		      call_peeruri(call), call_localuri(call), call_id(call));
+	if (ev == UA_EVENT_CALL_INCOMING)
+	{
+		debug("sync_b2bua: CALL_INCOMING: peer=%s	-->	local=%s. id=%s\n",
+				call_peeruri(call), call_localuri(call), call_id(call));
 
 		err = new_session(call);
 		if (err) {
 			ua_hangup(ua, call, 500, "Server Error");
 		}
-		break;
 
-	default:
-		break;
+		return;
+	}
+
+	if (call)
+	{
+		struct session *sess;
+
+		sess = get_session_by_sip_callid(call_id(call));
+		if (!sess) {
+			warning("sync_b2bua: no session found for the given callid: %s\n",
+					call_id(call));
+			return;
+		}
+
+		switch (ev) {
+			case CALL_EVENT_ESTABLISHED:
+				debug("sync_b2bua: CALL_ESTABLISHED: peer_uri=%s\n",
+						call_peeruri(call));
+				break;
+
+			case CALL_EVENT_CLOSED:
+				debug("sync_b2bua: CALL_CLOSED: %s\n", prm);
+
+				mem_deref(sess);
+				break;
+
+			default:
+				debug("sync_b2bua: event: %d\n", ev);
+		}
 	}
 }
 
