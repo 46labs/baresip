@@ -119,8 +119,8 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	const char *param = carg->prm;
 	struct odict *od = NULL;
 	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
-	struct mbuf *mb;
-	struct session *sess;
+	struct mbuf *mb = NULL;
+	struct session *sess = NULL;
 	char a[64], b[64];
 	int err;
 
@@ -142,7 +142,7 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	debug("sync_b2bua: nosip_cal_connect:  id='%s', sip_callid:'%s'\n",
+	debug("sync_b2bua: nosip_call_connect:  id='%s', sip_callid:'%s'\n",
 	      oe_id ? oe_id->u.str : "", oe_sip_callid ? oe_sip_callid->u.str : "");
 
 	// check that nosip call exist for the given id.
@@ -165,7 +165,7 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 
 	// copy the SDP string into a memory buffer.
 	mb = mbuf_alloc(str_len(oe_desc->u.str));
-	if (mb) {
+	if (!mb) {
 		err = ENOMEM;
 		goto out;
 	}
@@ -184,13 +184,12 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	audio_set_devicename(call_audio(sess->sip_call), a, b);
 	audio_set_devicename(nosip_call_audio(sess->nosip_call), b, a);
 
-	// TODO: prepare response.
-
  out:
 	if (err)
 		mem_deref(sess);
 
 	mem_deref(od);
+	mem_deref(mb);
 
 	return err;
 }
@@ -281,9 +280,6 @@ static int nosip_call_create(struct re_printf *pf, void *arg)
 		warning("sync_b2bua: failed to encode json (%m)\n", err);
 		goto out;
 	}
-
-	// TMP: accept the call with the local offer.
-	nosip_call_accept(sess->nosip_call, mb, false /* offer */);
 
  out:
 	if (err)
