@@ -96,6 +96,8 @@ static int new_session(struct call *call)
 	if (!sess)
 		return ENOMEM;
 
+	mem_ref(call);
+
 	sess->sip_call = call;
 
 	ua_answer(call_get_ua(call), call);
