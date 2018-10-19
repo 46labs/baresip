@@ -337,12 +337,12 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 		}
 
 		switch (ev) {
-			case CALL_EVENT_ESTABLISHED:
+			case UA_EVENT_CALL_ESTABLISHED:
 				debug("sync_b2bua: CALL_ESTABLISHED: peer_uri=%s\n",
 						call_peeruri(call));
 				break;
 
-			case CALL_EVENT_CLOSED:
+			case UA_EVENT_CALL_CLOSED:
 				debug("sync_b2bua: CALL_CLOSED: %s\n", prm);
 
 				mem_deref(sess);
