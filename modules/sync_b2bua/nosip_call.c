@@ -77,7 +77,10 @@ int nosip_call_sdp_media_debug(const struct nosip_call *call)
 
 	err = sdp_media_debug(&pf, stream_sdpmedia(audio_strm(call->audio)));
 
-	info("%b", mb->buf, mb->end);
+	info("- - - - - S D P  M E D I A - - - - -\n"
+	    "%b"
+	    "- - - - - - - - - - - - - - - - - - -\n",
+	    mb->buf, mb->end);
 
 	mem_deref(mb);
 
@@ -171,6 +174,14 @@ int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
 
 	debug("nosip_call_accept\n");
 
+	info("- - - - - S D P - %s - - - - -\n"
+	     "%b"
+	     "- - - - - - - - - - - - - - - - - - -\n",
+	     offer ? "O f f e r" : "A n s w e r", desc->buf, desc->end);
+
+	// reset buffer possition.
+	desc->pos = 0;
+
 	err = sdp_decode(call->sdp, desc, offer);
 	if (err) {
 		warning("b2bua: sdp_decode failed (%m)\n", err);
@@ -188,6 +199,7 @@ int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
  */
 void nosip_audio_start(const struct nosip_call *call)
 {
+	const struct sdp_media *m;
 	const struct sdp_format *sc;
 	int err;
 
@@ -196,33 +208,35 @@ void nosip_audio_start(const struct nosip_call *call)
 	/* media attributes */
 	audio_sdp_attr_decode(call->audio);
 
-	sc = sdp_media_rformat(stream_sdpmedia(audio_strm(call->audio)), NULL);
+	m = stream_sdpmedia(audio_strm(call->audio));
+
+	sc = sdp_media_rformat(m, NULL);
 	if (sc) {
 		struct aucodec *ac = sc->data;
 
 		if (ac) {
 			err  = audio_encoder_set(call->audio, sc->data, sc->pt, sc->params);
 			if (err) {
-				warning("call: start: audio_encoder_set error: %m\n", err);
+				warning("nosip_call: start: audio_encoder_set error: %m\n", err);
 			}
 			err |= audio_decoder_set(call->audio, sc->data, sc->pt, sc->params);
 			if (err) {
-				warning("call: start: audio_decoder_set error: %m\n", err);
+				warning("nosip_call: start: audio_decoder_set error: %m\n", err);
 			}
 
 			if (!err) {
 				err = audio_start(call->audio);
 				if (err) {
-					warning("call: start: audio_start error: %m\n", err);
+					warning("nosip_call: start: audio_start error: %m\n", err);
 				}
 			}
 		}
 		else {
-			info("call: no common audio-codecs..\n");
+			info("nosip_call: no common audio-codecs..\n");
 		}
 	}
 	else {
-		info("call: audio stream is disabled..\n");
+		info("nosip_call: audio stream is disabled..\n");
 	}
 
 	stream_update(audio_strm(call->audio));

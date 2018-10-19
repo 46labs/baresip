@@ -60,6 +60,8 @@ static struct session *get_session_by_sip_callid(const char* id)
 {
 	struct le *le;
 
+	debug("get_session_by_sip_callid(%s)\n", id);
+
 	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
 		struct session *sess = le->data;
 
@@ -73,6 +75,8 @@ static struct session *get_session_by_sip_callid(const char* id)
 static struct session *get_session_by_nosip_callid(const char* id)
 {
 	struct le *le;
+
+	debug("get_session_by_nosip_callid(%s)\n", id);
 
 	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
 		struct session *sess = le->data;
@@ -170,6 +174,11 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
+	err = mbuf_write_str(mb, oe_desc->u.str);
+	if (err) {
+		goto out;
+	}
+
 	// accept the call with the remote rtp parameters.
 	nosip_call_accept(sess->nosip_call, mb, false);
 	if (err) {
@@ -183,6 +192,9 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	/* connect the audio/video-bridge devices */
 	audio_set_devicename(call_audio(sess->sip_call), a, b);
 	audio_set_devicename(nosip_call_audio(sess->nosip_call), b, a);
+
+	// TMP
+	nosip_call_sdp_media_debug(sess->nosip_call);
 
  out:
 	if (err)
@@ -257,9 +269,6 @@ static int nosip_call_create(struct re_printf *pf, void *arg)
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		goto out;
 	}
-
-	// TMP
-	nosip_call_sdp_media_debug(sess->nosip_call);
 
 	// prepare response.
 	err = odict_alloc(&od_resp, 1);
