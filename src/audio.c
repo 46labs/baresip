@@ -1131,10 +1131,14 @@ int audio_alloc(struct audio **ap, const struct stream_param *stream_prm,
 	struct autx *tx;
 	struct aurx *rx;
 	struct le *le;
+	char cname[12];
 	int err;
 
 	if (!ap || !cfg)
 		return EINVAL;
+
+	if (!call)
+		rand_str(cname, sizeof(cname));
 
 	a = mem_zalloc(sizeof(*a), audio_destructor);
 	if (!a)
