@@ -195,6 +195,14 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	audio_set_devicename(call_audio(sess->sip_call), a, b);
 	audio_set_devicename(nosip_call_audio(sess->nosip_call), b, a);
 
+	// set SIP call audio player to noSIP call audio source.
+	err = audio_set_player(call_audio(sess->sip_call), "aubridge", b);
+	err |= audio_set_source(nosip_call_audio(sess->nosip_call), "aubridge", b);
+	if (err) {
+		warning("sync_b2bua: audio_set_player failed (%m)\n", err);
+		goto out;
+	}
+
 	// TMP
 	nosip_call_sdp_media_debug(sess->nosip_call);
 
