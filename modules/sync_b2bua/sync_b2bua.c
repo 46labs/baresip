@@ -113,15 +113,164 @@ static int new_session(struct call *call)
 }
 
 
+static void ua_event_handler(struct ua *ua, enum ua_event ev,
+			     struct call *call, const char *prm, void *arg)
+{
+	int err;
+
+	(void)prm;
+	(void)arg;
+
+	if (ev == UA_EVENT_CALL_INCOMING)
+	{
+		debug("sync_b2bua: CALL_INCOMING: peer=%s	-->	local=%s. id=%s\n",
+				call_peeruri(call), call_localuri(call), call_id(call));
+
+		err = new_session(call);
+		if (err) {
+			ua_hangup(ua, call, 500, "Server Error");
+		}
+
+		return;
+	}
+
+	if (call)
+	{
+		struct session *sess;
+
+		sess = get_session_by_sip_callid(call_id(call));
+		if (!sess) {
+			warning("sync_b2bua: no session found for the given callid: %s\n",
+					call_id(call));
+			return;
+		}
+
+		switch (ev) {
+			case UA_EVENT_CALL_ESTABLISHED:
+				debug("sync_b2bua: CALL_ESTABLISHED: peer_uri=%s\n",
+						call_peeruri(call));
+				break;
+
+			case UA_EVENT_CALL_CLOSED:
+				debug("sync_b2bua: CALL_CLOSED: %s\n", prm);
+
+				mem_deref(sess);
+				break;
+
+			default:
+				debug("sync_b2bua: event: %d\n", ev);
+		}
+	}
+}
+
+
 /**
- * Connect a nosip call with a SIP call
+ * Create a nosip call state object
  *
- * @param pf        Response message print handler
- * @param arg       JSON
+ * @param pf  Print handler for debug output
+ * @param arg JSON containing command arguments
  *
- * @param [id]         (char*) ID for the nosip call to be created.
- * @param [sip_callid] (char*) callid of the SIP call related to this object.
- * @param [desc]       (char*) SDP answer.
+ * @param id         ID for the nosip call to be created
+ * @param sip_callid ID of the SIP call to be connected to
+ *
+ * @return 0 if success, otherwise errorcode
+ */
+static int nosip_call_create(struct re_printf *pf, void *arg)
+{
+	const struct cmd_arg *carg = arg;
+	const char *param = carg->prm;
+	struct odict *od = NULL;
+	struct odict *od_resp = NULL;
+	const struct odict_entry *oe_id, *oe_sip_callid;
+	struct session *sess = NULL;
+	struct mbuf *mb = NULL;
+	char *sdp = NULL;
+	int err;
+
+	/* Retrieve command params */
+	err = json_decode_odict(&od, 32, param, str_len(param), 16);
+	if (err) {
+		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+		goto out;
+	}
+
+	oe_id = odict_lookup(od, "id");
+	oe_sip_callid = odict_lookup(od, "sip_callid");
+	if (!oe_id || !oe_sip_callid) {
+		warning("sync_b2bua: missing json entries\n");
+		goto out;
+	}
+
+	debug("sync_b2bua: nosip_call_create: id='%s', sip_callid:'%s'\n",
+			oe_id ? oe_id->u.str : "",
+			oe_sip_callid ? oe_sip_callid->u.str : "");
+
+	/* Check that no nosip call exists for the given id */
+	sess = get_session_by_nosip_callid(oe_id->u.str);
+	if (sess) {
+		warning("sync_b2bua: session found for the given nosip callid: %s\n",
+			oe_id->u.str);
+		return EINVAL;
+	}
+
+	/* Check that a SIP call exists for the given SIP callid */
+	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+	if (!sess) {
+		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
+				oe_sip_callid->u.str);
+		return EINVAL;
+	}
+
+	/* Create a nosip call */
+	err = nosip_call_alloc(&sess->nosip_call, oe_id->u.str, true /* offer */);
+	if (err) {
+		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
+		goto out;
+	}
+
+	/* Prepare response */
+	err = odict_alloc(&od_resp, 1);
+	if (err)
+		goto out;
+
+	err |= nosip_call_sdp_get(sess->nosip_call, &mb, true /* offer */);
+	if (err) {
+		warning("sync_b2bua: failed to get SDP (%m)\n", err);
+		goto out;
+	}
+
+	err |= mbuf_strdup(mb, &sdp, mb->end);
+	err |= odict_entry_add(od_resp, "desc", ODICT_STRING, sdp);
+
+	err = json_encode_odict(pf, od_resp);
+	if (err) {
+		warning("sync_b2bua: failed to encode json (%m)\n", err);
+		goto out;
+	}
+
+ out:
+	if (err)
+		mem_deref(sess);
+
+	mem_deref(od);
+	mem_deref(od_resp);
+
+	mem_deref(mb);
+	mem_deref(sdp);
+
+	return err;
+}
+
+
+/**
+ * Create a nosip call state object
+ *
+ * @param pf  Print handler for debug output
+ * @param arg JSON containing command arguments
+ *
+ * @param id         ID for the nosip call to be created
+ * @param sip_callid ID of the SIP call to be connected to
+ * @param desc       SDP answer
  *
  * @return 0 if success, otherwise errorcode
  */
@@ -160,7 +309,7 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	/* Check that nosip call exist for the given id */
 	sess = get_session_by_nosip_callid(oe_id->u.str);
 	if (!sess) {
-		warning("sync_b2bua: no session exists for the given nosip call id: %s\n",
+		warning("sync_b2bua: no session found for the given nosip call id: %s\n",
 				oe_id->u.str);
 		err = EINVAL;
 		goto out;
@@ -220,155 +369,6 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	mem_deref(mb);
 
 	return err;
-}
-
-
-/**
- * Create a nosip call state object
- *
- * @param pf        Response message print handler
- * @param arg       JSON
- *
- * @param [id]         (char*) ID for the nosip call to be created.
- * @param [sip_callid] (char*) callid of the SIP call related to this object.
- *
- * @return 0 if success, otherwise errorcode
- */
-static int nosip_call_create(struct re_printf *pf, void *arg)
-{
-	const struct cmd_arg *carg = arg;
-	const char *param = carg->prm;
-	struct odict *od = NULL;
-	struct odict *od_resp = NULL;
-	const struct odict_entry *oe_id, *oe_sip_callid;
-	struct session *sess = NULL;
-	struct mbuf *mb = NULL;
-	char *sdp = NULL;
-	int err;
-
-	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		goto out;
-	}
-
-	oe_id = odict_lookup(od, "id");
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	if (!oe_id || !oe_sip_callid) {
-		warning("sync_b2bua: missing json entries\n");
-		goto out;
-	}
-
-	debug("sync_b2bua: nosip_call_create: id='%s', sip_callid:'%s'\n",
-			oe_id ? oe_id->u.str : "",
-			oe_sip_callid ? oe_sip_callid->u.str : "");
-
-	/* Check that no nosip call exists for the given id */
-	sess = get_session_by_nosip_callid(oe_id->u.str);
-	if (sess) {
-		warning("sync_b2bua: session exists for the given nosip callid: %s\n",
-			oe_id->u.str);
-		return EINVAL;
-	}
-
-	/* Check that a SIP call exists for the given SIP callid */
-	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
-	if (!sess) {
-		warning("sync_b2bua: no session exist for the given SIP callid: %s\n",
-				oe_sip_callid->u.str);
-		return EINVAL;
-	}
-
-	/* Create a nosip call */
-	err = nosip_call_alloc(&sess->nosip_call, oe_id->u.str, true /* offer */);
-	if (err) {
-		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
-		goto out;
-	}
-
-	/* Prepare response */
-	err = odict_alloc(&od_resp, 1);
-	if (err)
-		goto out;
-
-	err |= nosip_call_sdp_get(sess->nosip_call, &mb, true /* offer */);
-	if (err) {
-		warning("sync_b2bua: failed to get SDP (%m)\n", err);
-		goto out;
-	}
-
-	err |= mbuf_strdup(mb, &sdp, mb->end);
-	err |= odict_entry_add(od_resp, "desc", ODICT_STRING, sdp);
-
-	err = json_encode_odict(pf, od_resp);
-	if (err) {
-		warning("sync_b2bua: failed to encode json (%m)\n", err);
-		goto out;
-	}
-
- out:
-	if (err)
-		mem_deref(sess);
-
-	mem_deref(od);
-	mem_deref(od_resp);
-
-	mem_deref(mb);
-	mem_deref(sdp);
-
-	return err;
-}
-
-
-static void ua_event_handler(struct ua *ua, enum ua_event ev,
-			     struct call *call, const char *prm, void *arg)
-{
-	int err;
-
-	(void)prm;
-	(void)arg;
-
-	if (ev == UA_EVENT_CALL_INCOMING)
-	{
-		debug("sync_b2bua: CALL_INCOMING: peer=%s	-->	local=%s. id=%s\n",
-				call_peeruri(call), call_localuri(call), call_id(call));
-
-		err = new_session(call);
-		if (err) {
-			ua_hangup(ua, call, 500, "Server Error");
-		}
-
-		return;
-	}
-
-	if (call)
-	{
-		struct session *sess;
-
-		sess = get_session_by_sip_callid(call_id(call));
-		if (!sess) {
-			warning("sync_b2bua: no session found for the given callid: %s\n",
-					call_id(call));
-			return;
-		}
-
-		switch (ev) {
-			case UA_EVENT_CALL_ESTABLISHED:
-				debug("sync_b2bua: CALL_ESTABLISHED: peer_uri=%s\n",
-						call_peeruri(call));
-				break;
-
-			case UA_EVENT_CALL_CLOSED:
-				debug("sync_b2bua: CALL_CLOSED: %s\n", prm);
-
-				mem_deref(sess);
-				break;
-
-			default:
-				debug("sync_b2bua: event: %d\n", ev);
-		}
-	}
 }
 
 
@@ -443,7 +443,7 @@ static int play_start(struct re_printf *pf, void *arg)
 	/* Check that a SIP call exists for the given SIP callid */
 	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
 	if (!sess) {
-		warning("sync_b2bua: no session exist for the given SIP callid: %s\n",
+		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
 				oe_sip_callid->u.str);
 		return EINVAL;
 	}
@@ -477,7 +477,7 @@ static int play_start(struct re_printf *pf, void *arg)
 	/* Set SIP call audio source to the session's play audio play */
 	err = audio_set_source(call_audio(sess->sip_call), "aubridge", device);
 
-	err |= play_file(&sess->play, player, "callwaiting.wav", loop ? -1: 1);
+	err |= play_file(&sess->play, player, oe_file->u.str, loop ? -1: 1);
 	if (err)
 		goto out;
 
@@ -520,7 +520,7 @@ static int play_stop(struct re_printf *pf, void *arg)
 	/* Check that a SIP call exists for the given SIP callid */
 	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
 	if (!sess) {
-		warning("sync_b2bua: no session exist for the given SIP callid: %s\n",
+		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
 				oe_sip_callid->u.str);
 		return EINVAL;
 	}
