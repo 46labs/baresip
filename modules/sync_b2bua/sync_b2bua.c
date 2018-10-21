@@ -31,6 +31,7 @@
 
 struct session {
 	struct le le;
+	struct play *play;
 	struct call *sip_call;
 	struct nosip_call *nosip_call;
 };
@@ -389,6 +390,95 @@ static int sync_b2bua_status(struct re_printf *pf, void *arg)
 	return err;
 }
 
+static int play_start(struct re_printf *pf, void *arg)
+{
+	static const char module[9] = "aubridge";
+
+	struct player *player = baresip_player();
+	const struct cmd_arg *carg = arg;
+	const char *param = carg->prm;
+	struct odict *od = NULL;
+	const struct odict_entry *oe_sip_callid, *oe_file, *oe_loop;
+	struct session *sess = NULL;
+	bool loop = false;
+	char device[64];
+
+	int err;
+
+	// retrieve command params.
+	err = json_decode_odict(&od, 32, param, str_len(param), 16);
+	if (err) {
+		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+		goto out;
+	}
+
+	oe_sip_callid = odict_lookup(od, "sip_callid");
+	oe_file       = odict_lookup(od, "file");
+	if (!oe_sip_callid || !oe_file) {
+		warning("sync_b2bua: missing json entries\n");
+		goto out;
+	}
+
+	oe_loop = odict_lookup(od, "loop");
+	if (oe_loop && oe_loop->type == ODICT_BOOL)
+		loop = oe_loop->u.boolean;
+	else
+		loop = false;
+
+	debug("sync_b2bua: play_start: sip_callid:'%s', file:'%s', loop:'%d'\n",
+			oe_sip_callid ? oe_sip_callid->u.str : "",
+			oe_file ? oe_file->u.str : "",
+			loop);
+
+	// check that a SIP call exists for the given SIP callid.
+	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+	if (!sess) {
+		warning("sync_b2bua: no session exist for the given SIP callid: %s\n",
+				oe_sip_callid->u.str);
+		return EINVAL;
+	}
+
+	struct config *cfg = conf_config();
+	if (!cfg){
+		re_hprintf(pf, "no config object");
+		err = ENOENT;
+		goto out;
+	}
+
+	/**
+	 * 'playfile' creates an 'auplay' state considering the audio alert
+	 *  module and device from the config.
+	 *
+	 * see 'src/play.c'
+	 */
+
+	re_snprintf(device, sizeof(cfg->audio.alert_dev), "play_%x", sess);
+
+	// update the audo alert module and device in the config
+	str_ncpy(cfg->audio.alert_mod, module, sizeof(module));
+	str_ncpy(cfg->audio.alert_dev, device, sizeof(device));
+
+	warning("audio alert settings modified. alert_mod:%s, alert_dev:%s\n",
+			cfg->audio.alert_mod, cfg->audio.alert_dev);
+
+	// reset the 'ausrc' device name of the sip call audio
+	audio_set_devicename(call_audio(sess->sip_call), device, "");
+
+	// set SIP call audio source to the session's play audio play.
+	err = audio_set_source(call_audio(sess->sip_call), "aubridge", device);
+
+	err |= play_file(&sess->play, player, "callwaiting.wav", loop ? -1: 1);
+	if (err)
+		goto out;
+
+	re_hprintf(pf, "%x", &sess->play);
+
+ out:
+	mem_deref(od);
+
+	return err;
+}
+
 static int rtp_capabilities(struct re_printf *pf, void *arg)
 {
 	struct nosip_call *call;
@@ -420,7 +510,8 @@ static int rtp_capabilities(struct re_printf *pf, void *arg)
 }
 
 static const struct cmd cmdv[] = {
-	{"sync_b2bua_status" , 0, 0      , "sync_b2bua_status" , sync_b2bua_status },
+	{"sync_b2bua_status"  , 0, 0      , "sync_b2bua_status"  , sync_b2bua_status  },
+	{"play_start"         , 0, 0      , "play_start"         , play_start         },
 	{"nosip_call_create"  , 0, CMD_PRM, "nosip_call_create"  , nosip_call_create  },
 	{"nosip_call_connect" , 0, CMD_PRM, "nosip_call_connect" , nosip_call_connect },
 	{"nosip_rtp_capabilities" , 0, 0, "nosip_rtp_capabilities" , rtp_capabilities },
