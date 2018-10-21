@@ -29,6 +29,8 @@
  *	- connect SIP call audio with nosip call audio.
  */
 
+static int MAX_SESSIONS = 100;
+
 struct session {
 	struct le le;
 	struct play *play;
@@ -486,8 +488,9 @@ static int play_stop(struct re_printf *pf, void *arg)
 	struct odict *od = NULL;
 	const struct odict_entry *oe_sip_callid;
 	struct session *sess = NULL;
-
 	int err;
+
+	(void)pf;
 
 	// retrieve command params.
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
@@ -514,6 +517,50 @@ static int play_stop(struct re_printf *pf, void *arg)
 	}
 
 	sess->play = mem_deref(sess->play);
+
+ out:
+	mem_deref(od);
+
+	return err;
+}
+
+static int play_list(struct re_printf *pf, void *arg)
+{
+	struct odict *od = NULL;
+	struct odict *od_resp, *od_array;
+	struct le *le;
+	int err;
+
+	(void) arg;
+
+	debug("sync_b2bua: play_list\n");
+
+	// prepare response.
+	err = odict_alloc(&od_resp, 1);
+	err |= odict_alloc(&od_array, MAX_SESSIONS);
+	if (err)
+		goto out;
+
+	err = odict_entry_add(od_resp, "list", ODICT_ARRAY, od_array);
+	if (err)
+		goto out;
+
+	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
+		struct session *sess = le->data;
+		char play_id[64];
+
+		if (!sess->play)
+			continue;
+
+		re_snprintf(play_id, sizeof(play_id), "play_%x", sess->play);
+		err |= odict_entry_add(od_array, "", ODICT_STRING, play_id);
+	}
+
+	err = json_encode_odict(pf, od_resp);
+	if (err) {
+		warning("sync_b2bua: failed to encode json (%m)\n", err);
+		goto out;
+	}
 
  out:
 	mem_deref(od);
@@ -555,6 +602,7 @@ static const struct cmd cmdv[] = {
 	{"sync_b2bua_status"  , 0, 0      , "sync_b2bua_status"  , sync_b2bua_status  },
 	{"play_start"         , 0, 0      , "play_start"         , play_start         },
 	{"play_stop"          , 0, 0      , "play_stop"         , play_stop         },
+	{"play_list"          , 0, 0      , "play_list"         , play_list         },
 	{"nosip_call_create"  , 0, CMD_PRM, "nosip_call_create"  , nosip_call_create  },
 	{"nosip_call_connect" , 0, CMD_PRM, "nosip_call_connect" , nosip_call_connect },
 	{"nosip_rtp_capabilities" , 0, 0, "nosip_rtp_capabilities" , rtp_capabilities },
