@@ -479,6 +479,48 @@ static int play_start(struct re_printf *pf, void *arg)
 	return err;
 }
 
+static int play_stop(struct re_printf *pf, void *arg)
+{
+	const struct cmd_arg *carg = arg;
+	const char *param = carg->prm;
+	struct odict *od = NULL;
+	const struct odict_entry *oe_sip_callid;
+	struct session *sess = NULL;
+
+	int err;
+
+	// retrieve command params.
+	err = json_decode_odict(&od, 32, param, str_len(param), 16);
+	if (err) {
+		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+		goto out;
+	}
+
+	oe_sip_callid = odict_lookup(od, "sip_callid");
+	if (!oe_sip_callid) {
+		warning("sync_b2bua: missing json entries\n");
+		goto out;
+	}
+
+	debug("sync_b2bua: play_stop: sip_callid:'%s'\n",
+			oe_sip_callid ? oe_sip_callid->u.str : "");
+
+	// check that a SIP call exists for the given SIP callid.
+	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+	if (!sess) {
+		warning("sync_b2bua: no session exist for the given SIP callid: %s\n",
+				oe_sip_callid->u.str);
+		return EINVAL;
+	}
+
+	sess->play = mem_deref(sess->play);
+
+ out:
+	mem_deref(od);
+
+	return err;
+}
+
 static int rtp_capabilities(struct re_printf *pf, void *arg)
 {
 	struct nosip_call *call;
@@ -512,6 +554,7 @@ static int rtp_capabilities(struct re_printf *pf, void *arg)
 static const struct cmd cmdv[] = {
 	{"sync_b2bua_status"  , 0, 0      , "sync_b2bua_status"  , sync_b2bua_status  },
 	{"play_start"         , 0, 0      , "play_start"         , play_start         },
+	{"play_stop"          , 0, 0      , "play_stop"         , play_stop         },
 	{"nosip_call_create"  , 0, CMD_PRM, "nosip_call_create"  , nosip_call_create  },
 	{"nosip_call_connect" , 0, CMD_PRM, "nosip_call_connect" , nosip_call_connect },
 	{"nosip_rtp_capabilities" , 0, 0, "nosip_rtp_capabilities" , rtp_capabilities },
