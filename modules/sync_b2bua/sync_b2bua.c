@@ -75,6 +75,7 @@ static struct session *get_session_by_sip_callid(const char* id)
 	return NULL;
 }
 
+
 static struct session *get_session_by_nosip_callid(const char* id)
 {
 	struct le *le;
@@ -90,6 +91,7 @@ static struct session *get_session_by_nosip_callid(const char* id)
 
 	return NULL;
 }
+
 
 static int new_session(struct call *call)
 {
@@ -110,6 +112,7 @@ static int new_session(struct call *call)
 	return 0;
 }
 
+
 /**
  * Connect a nosip call with a SIP call
  *
@@ -128,14 +131,14 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	const char *param = carg->prm;
 	struct odict *od = NULL;
 	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
-	struct mbuf *mb = NULL;
 	struct session *sess = NULL;
+	struct mbuf *mb = NULL;
 	char a[64], b[64];
 	int err;
 
 	(void)pf;
 
-	// retrieve command params.
+	/* Retrieve command params */
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
 	if (err) {
 		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
@@ -154,7 +157,7 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: nosip_call_connect:  id='%s', sip_callid:'%s'\n",
 	      oe_id ? oe_id->u.str : "", oe_sip_callid ? oe_sip_callid->u.str : "");
 
-	// check that nosip call exist for the given id.
+	/* Check that nosip call exist for the given id */
 	sess = get_session_by_nosip_callid(oe_id->u.str);
 	if (!sess) {
 		warning("sync_b2bua: no session exists for the given nosip call id: %s\n",
@@ -163,7 +166,7 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	// check that SIP call exist for the given SIP callid.
+	/* Check that SIP call exist for the given SIP callid */
 	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given callid: %s\n",
@@ -172,7 +175,7 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	// copy the SDP string into a memory buffer.
+	/* Copy the SDP string into a memory buffer */
 	mb = mbuf_alloc(str_len(oe_desc->u.str));
 	if (!mb) {
 		err = ENOMEM;
@@ -184,7 +187,7 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	// accept the call with the remote rtp parameters.
+	/* Accept the call with the remote SDP */
 	nosip_call_accept(sess->nosip_call, mb, false);
 	if (err) {
 		warning("sync_b2bua: nosip_call_accept failed (%m)\n", err);
@@ -194,11 +197,11 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	re_snprintf(a, sizeof(a), "A-%x", sess);
 	re_snprintf(b, sizeof(b), "B-%x", sess);
 
-	/* connect the audio/video-bridge devices */
+	/* Connect the audio/video-bridge devices */
 	audio_set_devicename(call_audio(sess->sip_call), a, b);
 	audio_set_devicename(nosip_call_audio(sess->nosip_call), b, a);
 
-	// set SIP call audio player to noSIP call audio source.
+	/* Set SIP call audio player to noSIP call audio source */
 	err = audio_set_player(call_audio(sess->sip_call), "aubridge", b);
 	err |= audio_set_source(nosip_call_audio(sess->nosip_call), "aubridge", b);
 	if (err) {
@@ -206,7 +209,7 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	// TMP
+	/* TMP */
 	nosip_call_sdp_media_debug(sess->nosip_call);
 
  out:
@@ -218,6 +221,7 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 
 	return err;
 }
+
 
 /**
  * Create a nosip call state object
@@ -237,12 +241,12 @@ static int nosip_call_create(struct re_printf *pf, void *arg)
 	struct odict *od = NULL;
 	struct odict *od_resp = NULL;
 	const struct odict_entry *oe_id, *oe_sip_callid;
+	struct session *sess = NULL;
 	struct mbuf *mb = NULL;
 	char *sdp = NULL;
-	struct session *sess = NULL;
 	int err;
 
-	// retrieve command params.
+	/* Retrieve command params */
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
 	if (err) {
 		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
@@ -260,7 +264,7 @@ static int nosip_call_create(struct re_printf *pf, void *arg)
 			oe_id ? oe_id->u.str : "",
 			oe_sip_callid ? oe_sip_callid->u.str : "");
 
-	// check that no nosip call exists for the given id.
+	/* Check that no nosip call exists for the given id */
 	sess = get_session_by_nosip_callid(oe_id->u.str);
 	if (sess) {
 		warning("sync_b2bua: session exists for the given nosip callid: %s\n",
@@ -268,7 +272,7 @@ static int nosip_call_create(struct re_printf *pf, void *arg)
 		return EINVAL;
 	}
 
-	// check that a SIP call exists for the given SIP callid.
+	/* Check that a SIP call exists for the given SIP callid */
 	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
 	if (!sess) {
 		warning("sync_b2bua: no session exist for the given SIP callid: %s\n",
@@ -276,14 +280,14 @@ static int nosip_call_create(struct re_printf *pf, void *arg)
 		return EINVAL;
 	}
 
-	// create a nosip call.
+	/* Create a nosip call */
 	err = nosip_call_alloc(&sess->nosip_call, oe_id->u.str, true /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		goto out;
 	}
 
-	// prepare response.
+	/* Prepare response */
 	err = odict_alloc(&od_resp, 1);
 	if (err)
 		goto out;
@@ -316,10 +320,12 @@ static int nosip_call_create(struct re_printf *pf, void *arg)
 	return err;
 }
 
+
 static void ua_event_handler(struct ua *ua, enum ua_event ev,
 			     struct call *call, const char *prm, void *arg)
 {
 	int err;
+
 	(void)prm;
 	(void)arg;
 
@@ -370,6 +376,7 @@ static int sync_b2bua_status(struct re_printf *pf, void *arg)
 {
 	struct le *le;
 	int err = 0;
+
 	(void)arg;
 
 	err |= re_hprintf(pf, "B2BUA status:\n");
@@ -392,6 +399,7 @@ static int sync_b2bua_status(struct re_printf *pf, void *arg)
 	return err;
 }
 
+
 static int play_start(struct re_printf *pf, void *arg)
 {
 	static const char module[9] = "aubridge";
@@ -407,7 +415,7 @@ static int play_start(struct re_printf *pf, void *arg)
 
 	int err;
 
-	// retrieve command params.
+	/* Retrieve command params */
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
 	if (err) {
 		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
@@ -432,7 +440,7 @@ static int play_start(struct re_printf *pf, void *arg)
 			oe_file ? oe_file->u.str : "",
 			loop);
 
-	// check that a SIP call exists for the given SIP callid.
+	/* Check that a SIP call exists for the given SIP callid */
 	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
 	if (!sess) {
 		warning("sync_b2bua: no session exist for the given SIP callid: %s\n",
@@ -456,17 +464,17 @@ static int play_start(struct re_printf *pf, void *arg)
 
 	re_snprintf(device, sizeof(cfg->audio.alert_dev), "play_%x", sess);
 
-	// update the audo alert module and device in the config
+	/* Update the audo alert module and device in the config */
 	str_ncpy(cfg->audio.alert_mod, module, sizeof(module));
 	str_ncpy(cfg->audio.alert_dev, device, sizeof(device));
 
 	warning("audio alert settings modified. alert_mod:%s, alert_dev:%s\n",
 			cfg->audio.alert_mod, cfg->audio.alert_dev);
 
-	// reset the 'ausrc' device name of the sip call audio
+	/* Reset the 'ausrc' device name of the sip call audio */
 	audio_set_devicename(call_audio(sess->sip_call), device, "");
 
-	// set SIP call audio source to the session's play audio play.
+	/* Set SIP call audio source to the session's play audio play */
 	err = audio_set_source(call_audio(sess->sip_call), "aubridge", device);
 
 	err |= play_file(&sess->play, player, "callwaiting.wav", loop ? -1: 1);
@@ -481,6 +489,7 @@ static int play_start(struct re_printf *pf, void *arg)
 	return err;
 }
 
+
 static int play_stop(struct re_printf *pf, void *arg)
 {
 	const struct cmd_arg *carg = arg;
@@ -492,7 +501,7 @@ static int play_stop(struct re_printf *pf, void *arg)
 
 	(void)pf;
 
-	// retrieve command params.
+	/* Retrieve command params */
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
 	if (err) {
 		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
@@ -508,7 +517,7 @@ static int play_stop(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: play_stop: sip_callid:'%s'\n",
 			oe_sip_callid ? oe_sip_callid->u.str : "");
 
-	// check that a SIP call exists for the given SIP callid.
+	/* Check that a SIP call exists for the given SIP callid */
 	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
 	if (!sess) {
 		warning("sync_b2bua: no session exist for the given SIP callid: %s\n",
@@ -524,6 +533,7 @@ static int play_stop(struct re_printf *pf, void *arg)
 	return err;
 }
 
+
 static int play_list(struct re_printf *pf, void *arg)
 {
 	struct odict *od = NULL;
@@ -535,7 +545,6 @@ static int play_list(struct re_printf *pf, void *arg)
 
 	debug("sync_b2bua: play_list\n");
 
-	// prepare response.
 	err = odict_alloc(&od_resp, 1);
 	err |= odict_alloc(&od_array, MAX_SESSIONS);
 	if (err)
@@ -568,6 +577,7 @@ static int play_list(struct re_printf *pf, void *arg)
 	return err;
 }
 
+
 static int rtp_capabilities(struct re_printf *pf, void *arg)
 {
 	struct nosip_call *call;
@@ -581,7 +591,6 @@ static int rtp_capabilities(struct re_printf *pf, void *arg)
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		return err;
 	}
-
 
 	err = nosip_call_sdp_get(call, &mb, true /* offer */);
 	if (err) {
@@ -598,14 +607,15 @@ static int rtp_capabilities(struct re_printf *pf, void *arg)
 	return err;
 }
 
+
 static const struct cmd cmdv[] = {
-	{"sync_b2bua_status"  , 0, 0      , "sync_b2bua_status"  , sync_b2bua_status  },
-	{"play_start"         , 0, 0      , "play_start"         , play_start         },
-	{"play_stop"          , 0, 0      , "play_stop"         , play_stop         },
-	{"play_list"          , 0, 0      , "play_list"         , play_list         },
-	{"nosip_call_create"  , 0, CMD_PRM, "nosip_call_create"  , nosip_call_create  },
-	{"nosip_call_connect" , 0, CMD_PRM, "nosip_call_connect" , nosip_call_connect },
-	{"nosip_rtp_capabilities" , 0, 0, "nosip_rtp_capabilities" , rtp_capabilities },
+	{"sync_b2bua_status",      0,       0, "B2UA status",      sync_b2bua_status  },
+	{"play_start",             0, CMD_PRM, "Play start",       play_start         },
+	{"play_stop",              0, CMD_PRM, "Play stop",        play_stop          },
+	{"play_list",              0,       0, "Play list",        play_list          },
+	{"nosip_call_create",      0, CMD_PRM, "Call create",      nosip_call_create  },
+	{"nosip_call_connect",     0, CMD_PRM, "Call connect",     nosip_call_connect },
+	{"nosip_rtp_capabilities", 0,       0, "RTP capabilities", rtp_capabilities   },
 };
 
 
