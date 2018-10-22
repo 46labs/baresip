@@ -481,8 +481,6 @@ static int play_start(struct re_printf *pf, void *arg)
 	if (err)
 		goto out;
 
-	re_hprintf(pf, "%x", &sess->play);
-
  out:
 	mem_deref(od);
 
@@ -556,13 +554,11 @@ static int play_list(struct re_printf *pf, void *arg)
 
 	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
 		struct session *sess = le->data;
-		char play_id[64];
 
 		if (!sess->play)
 			continue;
 
-		re_snprintf(play_id, sizeof(play_id), "play_%x", sess->play);
-		err |= odict_entry_add(od_array, "", ODICT_STRING, play_id);
+		err |= odict_entry_add(od_array, "", ODICT_STRING, call_id(sess->sip_call));
 	}
 
 	err = json_encode_odict(pf, od_resp);
