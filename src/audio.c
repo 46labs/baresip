@@ -696,7 +696,6 @@ static void ausrc_read_handler(const void *sampv, size_t sampc, void *arg)
 		unsigned i;
 
 		for (i=0; i<16; i++) {
-
 			if (aubuf_cur_size(tx->aubuf) < tx->psize)
 				break;
 
@@ -2226,7 +2225,6 @@ int audio_set_source(struct audio *au, const char *mod, const char *device)
 
 	return 0;
 }
-
 
 /**
  * Set the audio player state to a new audio player module and device.

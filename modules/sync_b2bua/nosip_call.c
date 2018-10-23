@@ -8,7 +8,7 @@
 #include <baresip.h>
 
 #include "../src/core.h"
-#include "nosip_call.h"
+#include "sync_b2bua.h"
 
 struct nosip_call {
 	char *id;                /**< nosip call id */
