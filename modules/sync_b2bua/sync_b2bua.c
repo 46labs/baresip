@@ -470,7 +470,7 @@ static int sync_b2bua_status(struct re_printf *pf, void *arg)
 		err |= re_hprintf(pf, "%H\n", audio_debug, nosip_call_audio(sess->nosip_call));
 	}
 
-	err |= re_hprintf(pf, "Mixer:\n");
+	err |= re_hprintf(pf, "Mixer: (%zup)\n", aumix_source_count(mixer));
 
 	for (le = mixer_sourcel.head; le; le = le->next) {
 		struct mixer_source *src = le->data;
@@ -853,6 +853,13 @@ static int mixer_source_add(struct re_printf *pf, void *arg)
 				nosip_call, call_audio(sess->sip_call));
 		if (err) {
 			warning("sync_b2bua: mixer_source_alloc failed (%m)\n", err);
+			goto out;
+		}
+
+		/* Set audio source to the just allocated one */
+		err = audio_set_source(call_audio(sess->sip_call), "aumix", oe_id->u.str);
+		if (err) {
+			warning("mixer_source: audio_set_source failed (%m)\n", err);
 			goto out;
 		}
 	}

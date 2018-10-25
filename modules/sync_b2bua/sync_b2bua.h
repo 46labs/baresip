@@ -14,6 +14,7 @@ int mixer_auplay_alloc(struct auplay_st **stp, const struct auplay *ap,
 /*
  * Mixer ausrc
  */
+
 int mixer_ausrc_alloc(struct ausrc_st **stp, const struct ausrc *as,
 	      struct media_ctx **ctx,
 	      struct ausrc_prm *prm, const char *device,
@@ -25,14 +26,31 @@ int mixer_ausrc_alloc(struct ausrc_st **stp, const struct ausrc *as,
 
 struct mixer_source {
 	struct le le;
-	struct nosip_call *nosip_call;          /**> nosip_call */
-	struct auplay_device_st *auplay_device; /**< Aumix source */
-	struct aumix_source *aumix_source;      /**< Aumix source */
+	struct nosip_call *nosip_call;
+	struct auplay_device_st *auplay_device;
+	struct ausrc_device_st *ausrc_device;
+	struct aumix_source *aumix_source;
 };
 
 int mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
 		   char *device, struct nosip_call *nosip_call, struct audio* sip_call_audio);
 
+
+/*
+ * Mixer ausrc device
+ */
+
+struct ausrc_device_st {
+	struct le le;
+	char *device;
+	struct ausrc_st *ausrc;
+};
+
+int ausrc_device_alloc(struct ausrc_device_st **stp, const char *device);
+struct ausrc_device_st *ausrc_device_find(const char *device);
+void ausrc_device_set_ausrc(struct ausrc_device_st *st,
+		   struct ausrc_st *ausrc);
+struct ausrc_st *ausrc_device_get_ausrc(struct ausrc_device_st *st);
 
 /*
  * Mixer auplay device

@@ -8,55 +8,15 @@
 #include <baresip.h>
 
 #include "sync_b2bua.h"
-
-static struct list devicel;
-
-struct device {
-	struct le le;
-	char *device;
-	struct ausrc_st *ausrc;
-};
-
-struct ausrc_st {
-	const struct ausrc *as;      /* inheritance */
-	struct device *dev;
-	struct ausrc_prm prm;
-	ausrc_read_h *rh;
-	void *arg;
-};
-
-static void device_destructor(void *arg)
-{
-	struct device *st = arg;
-
-	warning("ausrc_destructor");
-
-	list_unlink(&st->le);
-	mem_deref(st->device);
-	st->ausrc = NULL;
-}
+#include "mixer_ausrc.h"
 
 static void ausrc_destructor(void *arg)
 {
 	struct ausrc_st *st = arg;
 
-	warning("ausrc_destructor");
+	ausrc_device_set_ausrc(st->dev, NULL);
 
 	mem_deref(st->dev);
-}
-
-static struct device *device_find(const char *device)
-{
-	struct le *le;
-
-	for (le = devicel.head; le; le = le->next) {
-		struct device *st = le->data;
-
-		if (!strcmp(st->device, device))
-			return st;
-	}
-
-	return NULL;
 }
 
 int mixer_ausrc_alloc(struct ausrc_st **stp, const struct ausrc *as,
@@ -65,22 +25,25 @@ int mixer_ausrc_alloc(struct ausrc_st **stp, const struct ausrc *as,
 	      ausrc_read_h *rh, ausrc_error_h *errh, void *arg)
 {
 	struct ausrc_st *st;
-	struct device *dev;
+	struct ausrc_device_st *dev;
 	int err = 0;
 	(void)ctx;
 	(void)errh;
 
+	warning("mixer_ausrc_alloc. ausrc_st: [%p], device: '%s' arg: [%p]\n",
+			*stp, device, arg);
+
 	if (!stp || !as || !prm)
 		return EINVAL;
 
-	dev = device_find(device);
+	dev = ausrc_device_find(device);
 	if (!dev) {
 		warning("mixer_ausrc: no device found: '%s'\n", device);
 		return ENOENT;
 	}
 
 	if (prm->fmt != AUFMT_S16LE) {
-		warning("aubridge: source: unsupported sample format (%s)\n",
+		warning("mixer_ausrc: unsupported sample format (%s)\n",
 			aufmt_name(prm->fmt));
 		return ENOTSUP;
 	}
@@ -95,7 +58,9 @@ int mixer_ausrc_alloc(struct ausrc_st **stp, const struct ausrc *as,
 	st->arg  = arg;
 
 	st->dev = dev;
-	dev->ausrc = st;
+	st->dev->ausrc = st;
+
+	mem_ref(dev);
 
 	*stp = st;
 
