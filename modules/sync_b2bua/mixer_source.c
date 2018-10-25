@@ -9,6 +9,7 @@
 #include <baresip.h>
 
 #include "sync_b2bua.h"
+#include "mixer_ausrc.h"
 
 static void mixer_source_destructor(void *arg)
 {
@@ -17,6 +18,7 @@ static void mixer_source_destructor(void *arg)
 	list_unlink(&src->le);
 
 	mem_deref(src->nosip_call);
+	mem_deref(src->ausrc_device);
 	mem_deref(src->auplay_device);
 	mem_deref(src->aumix_source);
 }
@@ -26,9 +28,15 @@ static void mixer_source_destructor(void *arg)
  */
 static void aumix_frame_handler(const int16_t *sampv, size_t sampc, void *arg)
 {
-	(void)sampv;
-	(void)sampc;
-	(void)arg;
+	struct ausrc_device_st *st = arg;
+	struct ausrc_st *as;
+
+	as = st->ausrc;
+
+	if (!as)
+		return;
+
+	as->rh(sampv, sampc, as->arg);
 
 	/* debug("aumix_frame_handler. sampc: '%zu'\n", sampc); */
 }
@@ -83,17 +91,24 @@ int mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix, char *de
 	}
 	else
 	{
+		/* Allocate a mixer auplay device */
+		err = ausrc_device_alloc(&src->ausrc_device, device);
+		if (err) {
+			warning("mixer_source: ausrc_device_alloc failed (%m)\n", err);
+			goto out;
+		}
+
 		/* Create aumix source */
 		err = aumix_source_alloc(
-				&src->aumix_source, aumix, aumix_frame_handler, NULL);
+				&src->aumix_source, aumix, aumix_frame_handler, src->ausrc_device);
 		if (err)
 			goto out;
 	}
 
-	/* Allocate a mixer device */
+	/* Allocate a mixer auplay device */
 	err = auplay_device_alloc(&src->auplay_device, device, src->aumix_source);
 	if (err) {
-		warning("mixer_source: device_alloc failed (%m)\n", err);
+		warning("mixer_source: auplay_device_alloc failed (%m)\n", err);
 		goto out;
 	}
 

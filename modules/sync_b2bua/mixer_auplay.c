@@ -87,7 +87,7 @@ int mixer_auplay_alloc(struct auplay_st **stp, const struct auplay *ap,
 	}
 
 	if (prm->fmt != AUFMT_S16LE) {
-		warning("mixer_play: playback: unsupported sample format (%s)\n",
+		warning("mixer_play unsupported sample format (%s)\n",
 			aufmt_name(prm->fmt));
 		return ENOTSUP;
 	}
