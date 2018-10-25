@@ -30,9 +30,6 @@ int mixer_ausrc_alloc(struct ausrc_st **stp, const struct ausrc *as,
 	(void)ctx;
 	(void)errh;
 
-	warning("mixer_ausrc_alloc. ausrc_st: [%p], device: '%s' arg: [%p]\n",
-			*stp, device, arg);
-
 	if (!stp || !as || !prm)
 		return EINVAL;
 
