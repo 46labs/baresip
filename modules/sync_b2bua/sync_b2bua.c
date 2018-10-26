@@ -7,8 +7,8 @@
 #include <re.h>
 #include <rem.h>
 #include <baresip.h>
-
 #include "sync_b2bua.h"
+#include "aumix.h"
 
 /**
  * @defgroup sync_b2bua sync_b2bua
@@ -381,7 +381,7 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	}
 
 	/* TMP */
-	nosip_call_sdp_media_debug(sess->nosip_call);
+	/* nosip_call_sdp_media_debug(sess->nosip_call); */
 
  out:
 	if (err)
@@ -856,6 +856,9 @@ static int mixer_source_add(struct re_printf *pf, void *arg)
 			goto out;
 		}
 
+		/* Reset the 'ausrc' device name of the sip call audio */
+		audio_set_devicename(call_audio(sess->sip_call), oe_id->u.str, "");
+
 		/* Set audio source to the just allocated one */
 		err = audio_set_source(call_audio(sess->sip_call), "aumix", oe_id->u.str);
 		if (err) {
@@ -989,8 +992,8 @@ static int module_init(void)
 	ua_set_catchall(ua_in, true);
 
 	/* Register the mixer source and player */
-	err = ausrc_register(&ausrc, baresip_ausrcl(), "aumix", mixer_ausrc_alloc);
-	err |= auplay_register(&auplay, baresip_auplayl(), "aumix", mixer_auplay_alloc);
+	err = ausrc_register(&ausrc, baresip_ausrcl(), "aumix", src_alloc);
+	err |= auplay_register(&auplay, baresip_auplayl(), "aumix", play_alloc);
 	if (err)
 		return err;
 
@@ -1028,7 +1031,7 @@ static int module_close(void)
 
 
 const struct mod_export DECL_EXPORTS(b2bua) = {
-	"b2bua",
+	"sync_b2bua",
 	"application",
 	module_init,
 	module_close

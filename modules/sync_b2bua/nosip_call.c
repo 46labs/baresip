@@ -174,12 +174,14 @@ int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
 
 	debug("nosip_call_accept\n");
 
+	/*
 	info("- - - - - S D P - %s - - - - -\n"
 	     "%b"
 	     "- - - - - - - - - - - - - - - - - - -\n",
 	     offer ? "O f f e r" : "A n s w e r", desc->buf, desc->end);
+	*/
 
-	// reset buffer possition.
+	/* reset buffer possition. */
 	desc->pos = 0;
 
 	err = sdp_decode(call->sdp, desc, offer);
