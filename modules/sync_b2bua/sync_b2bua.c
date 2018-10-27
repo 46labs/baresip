@@ -124,7 +124,7 @@ static int new_session(struct call *call)
 
 
 static void ua_event_handler(struct ua *ua, enum ua_event ev,
-			     struct call *call, const char *prm, void *arg)
+			 struct call *call, const char *prm, void *arg)
 {
 	int err;
 
@@ -173,68 +173,45 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 	}
 }
 
+
 /**
  * Create a nosip call state object
  *
- * @param pf  Print handler for debug output
- * @param arg JSON containing command arguments
- *
+ * @param pf         Print handler for debug output
  * @param id         ID for the nosip call to be created
  * @param sip_callid ID of the SIP call to be connected to
  *
  * @return 0 if success, otherwise errorcode
  */
-static int nosip_call_create(struct re_printf *pf, void *arg)
+int nosip_call_create(struct re_printf *pf, const char *id,
+		   const char *sip_callid)
 {
-	const struct cmd_arg *carg = arg;
-	const char *param = carg->prm;
-	struct odict *od = NULL;
 	struct odict *od_resp = NULL;
-	const struct odict_entry *oe_id, *oe_sip_callid;
-	struct session *sess = NULL;
+	struct session *sess;
 	struct mbuf *mb = NULL;
 	char *sdp = NULL;
 	int err;
 
-	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
-
-	oe_id = odict_lookup(od, "id");
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	if (!oe_id || !oe_sip_callid) {
-		warning("sync_b2bua: missing json entries\n");
-		err = EINVAL;
-		goto out;
-	}
-
-	debug("sync_b2bua: nosip_call_create: id='%s', sip_callid:'%s'\n",
-			oe_id ? oe_id->u.str : "",
-			oe_sip_callid ? oe_sip_callid->u.str : "");
-
 	/* Check that no nosip call exists for the given id */
-	sess = get_session_by_nosip_callid(oe_id->u.str);
+	sess = get_session_by_nosip_callid(id);
 	if (sess) {
 		warning("sync_b2bua: session found for the given nosip callid: %s\n",
-			oe_id->u.str);
+			id);
 		err = ENOENT;
 		goto out;
 	}
 
 	/* Check that a SIP call exists for the given SIP callid */
-	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+	sess = get_session_by_sip_callid(sip_callid);
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
-				oe_sip_callid->u.str);
+				sip_callid);
 		err = ENOENT;
 		goto out;
 	}
 
 	/* Create a nosip call */
-	err = nosip_call_alloc(&sess->nosip_call, oe_id->u.str, true /* offer */);
+	err = nosip_call_alloc(&sess->nosip_call, id, true /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		goto out;
@@ -264,7 +241,6 @@ static int nosip_call_create(struct re_printf *pf, void *arg)
 	if (err)
 		mem_deref(sess);
 
-	mem_deref(od);
 	mem_deref(od_resp);
 
 	mem_deref(mb);
@@ -277,61 +253,37 @@ static int nosip_call_create(struct re_printf *pf, void *arg)
 /**
  * Connect a nosip call with the corresponding SIP call
  *
- * @param pf  Print handler for debug output
- * @param arg JSON containing command arguments
- *
+ * @param pf         Print handler for debug output
  * @param id         ID for the nosip call to be created
  * @param sip_callid ID of the SIP call to be connected to
  * @param desc       SDP answer
  *
  * @return 0 if success, otherwise errorcode
  */
-static int nosip_call_connect(struct re_printf *pf, void *arg)
+int nosip_call_connect(struct re_printf *pf, const char *id,
+		   const char *sip_callid, const char *desc)
 {
-	const struct cmd_arg *carg = arg;
-	const char *param = carg->prm;
-	struct odict *od = NULL;
-	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
-	struct session *sess = NULL;
+	struct session *sess;
 	struct mbuf *mb = NULL;
 	char a[64], b[64];
 	int err;
 
 	(void)pf;
 
-	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
-
-	oe_id = odict_lookup(od, "id");
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	oe_desc = odict_lookup(od, "desc");
-	if (!oe_id || !oe_sip_callid || !oe_desc) {
-		warning("sync_b2bua: missing json entries\n");
-		err = EINVAL;
-		goto out;
-	}
-
-	debug("sync_b2bua: nosip_call_connect:  id='%s', sip_callid:'%s'\n",
-	      oe_id ? oe_id->u.str : "", oe_sip_callid ? oe_sip_callid->u.str : "");
-
 	/* Check that nosip call exist for the given id */
-	sess = get_session_by_nosip_callid(oe_id->u.str);
+	sess = get_session_by_nosip_callid(id);
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given nosip call id: %s\n",
-				oe_id->u.str);
+				id);
 		err = ENOENT;
 		goto out;
 	}
 
 	/* Check that SIP call exist for the given SIP callid */
-	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+	sess = get_session_by_sip_callid(sip_callid);
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given callid: %s\n",
-				oe_sip_callid->u.str);
+				sip_callid);
 		err = ENOENT;
 		goto out;
 	}
@@ -340,13 +292,13 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	sess->play = mem_deref(sess->play);
 
 	/* Copy the SDP string into a memory buffer */
-	mb = mbuf_alloc(str_len(oe_desc->u.str));
+	mb = mbuf_alloc(str_len(desc));
 	if (!mb) {
 		err = ENOMEM;
 		goto out;
 	}
 
-	err = mbuf_write_str(mb, oe_desc->u.str);
+	err = mbuf_write_str(mb, desc);
 	if (err) {
 		goto out;
 	}
@@ -387,7 +339,6 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 	if (err)
 		mem_deref(sess);
 
-	mem_deref(od);
 	mem_deref(mb);
 
 	return err;
@@ -397,62 +348,37 @@ static int nosip_call_connect(struct re_printf *pf, void *arg)
 /**
  * Terminate a nosip call state object
  *
- * @param pf  Print handler for debug output
- * @param arg JSON containing command arguments
- *
+ * @param pf         Print handler for debug output
  * @param sip_callid ID of the SIP call to be connected to
  *
  * @return 0 if success, otherwise errorcode
  */
-static int sip_call_hangup(struct re_printf *pf, void *arg)
+int sip_call_hangup(struct re_printf *pf, const char *sip_callid,
+		   const char *reason)
 {
-	const struct cmd_arg *carg = arg;
-	const char *param = carg->prm;
-	struct odict *od = NULL;
-	const struct odict_entry *oe_sip_callid, *oe_reason;
-	struct session *sess = NULL;
-	int err;
+	struct session *sess;
 
 	(void)pf;
 
-	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
-
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	oe_reason = odict_lookup(od, "reason");
-
-	debug("sync_b2bua: sip_call_hangup:  id='%s'\n",
-	      oe_sip_callid ? oe_sip_callid->u.str : "");
-
 	/* Check that SIP call exist for the given id */
-	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+	sess = get_session_by_sip_callid(sip_callid);
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given SIP call id: %s\n",
-				oe_sip_callid->u.str);
-		err = ENOENT;
-		goto out;
+				sip_callid);
+		return ENOENT;
 	}
 
 	/* Hangup the call */
-	ua_hangup(ua_in, sess->sip_call, 0 /* code */, NULL /* reason */);
+	ua_hangup(ua_in, sess->sip_call, 0 /* code */, reason);
 
- out:
-	mem_deref(od);
-
-	return err;
+	return 0;
 }
 
 
-static int sync_b2bua_status(struct re_printf *pf, void *arg)
+int status(struct re_printf *pf)
 {
 	struct le *le;
 	int err = 0;
-
-	(void)arg;
 
 	err |= re_hprintf(pf, "B2BUA status:\n");
 	err |= re_hprintf(pf, "  SIP UA:  %s\n", ua_aor(ua_in));
@@ -485,61 +411,30 @@ static int sync_b2bua_status(struct re_printf *pf, void *arg)
 /**
  * Start playing a file on a SIP call
  *
- * @param pf  Print handler for debug output
- * @param arg JSON containing command arguments
- *
+ * @param pf         Print handler for debug output
  * @param sip_callid ID of the SIP call
  * @param file       Name of the file to be played
  * @param loop       True if the file is to be played on loop
  *
  * @return 0 if success, otherwise errorcode
  */
-static int play_start(struct re_printf *pf, void *arg)
+int play_start(struct re_printf *pf, const char *sip_callid,
+		   const char *file, bool loop)
 {
 	static const char module[9] = "aubridge";
 
 	struct player *player = baresip_player();
-	const struct cmd_arg *carg = arg;
-	const char *param = carg->prm;
-	struct odict *od = NULL;
-	const struct odict_entry *oe_sip_callid, *oe_file, *oe_loop;
-	struct session *sess = NULL;
-	bool loop = false;
+	struct session *sess;
 	char device[64];
 	int err;
 
 	(void)pf;
 
-	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err ;
-	}
-
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	oe_file       = odict_lookup(od, "file");
-	if (!oe_sip_callid || !oe_file) {
-		warning("sync_b2bua: missing json entries\n");
-		goto out;
-	}
-
-	oe_loop = odict_lookup(od, "loop");
-	if (oe_loop && oe_loop->type == ODICT_BOOL)
-		loop = oe_loop->u.boolean;
-	else
-		loop = false;
-
-	debug("sync_b2bua: play_start: sip_callid:'%s', file:'%s', loop:'%d'\n",
-			oe_sip_callid ? oe_sip_callid->u.str : "",
-			oe_file ? oe_file->u.str : "",
-			loop);
-
 	/* Check that a SIP call exists for the given SIP callid */
-	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+	sess = get_session_by_sip_callid(sip_callid);
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
-				oe_sip_callid->u.str);
+				sip_callid);
 		err = ENOENT;
 		goto out;
 	}
@@ -579,12 +474,11 @@ static int play_start(struct re_printf *pf, void *arg)
 	/* Stop any file playback */
 	sess->play = mem_deref(sess->play);
 
-	err |= play_file(&sess->play, player, oe_file->u.str, loop ? -1: 1);
+	err |= play_file(&sess->play, player, file, loop ? -1: 1);
 	if (err)
 		goto out;
 
  out:
-	mem_deref(od);
 
 	return err;
 }
@@ -593,55 +487,28 @@ static int play_start(struct re_printf *pf, void *arg)
 /**
  * Stop playing a file on a SIP call
  *
- * @param pf  Print handler for debug output
- * @param arg JSON containing command arguments
- *
+ * @param pf         Print handler for debug output
  * @param sip_callid ID of the SIP call
  *
  * @return 0 if success, otherwise errorcode
  */
-static int play_stop(struct re_printf *pf, void *arg)
+int play_stop(struct re_printf *pf, const char *sip_callid)
 {
-	const struct cmd_arg *carg = arg;
-	const char *param = carg->prm;
-	struct odict *od = NULL;
-	const struct odict_entry *oe_sip_callid;
-	struct session *sess = NULL;
-	int err;
+	struct session *sess;
 
 	(void)pf;
 
-	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		goto out;
-	}
-
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	if (!oe_sip_callid) {
-		warning("sync_b2bua: missing json entries\n");
-		goto out;
-	}
-
-	debug("sync_b2bua: play_stop: sip_callid:'%s'\n",
-			oe_sip_callid ? oe_sip_callid->u.str : "");
-
 	/* Check that a SIP call exists for the given SIP callid */
-	sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+	sess = get_session_by_sip_callid(sip_callid);
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
-				oe_sip_callid->u.str);
-		err = ENOENT;
-		goto out;
+				sip_callid);
+		return ENOENT;
 	}
 
 	sess->play = mem_deref(sess->play);
 
- out:
-	mem_deref(od);
-
-	return err;
+	return 0;
 }
 
 
@@ -649,20 +516,14 @@ static int play_stop(struct re_printf *pf, void *arg)
  * Get a list of SIP callids that that are currently playing a file
  *
  * @param pf  Print handler for debug output
- * @param arg JSON containing command arguments
  *
  * @return 0 if success, otherwise errorcode
  */
-static int play_list(struct re_printf *pf, void *arg)
+int play_list(struct re_printf *pf)
 {
-	struct odict *od = NULL;
 	struct odict *od_resp, *od_array;
 	struct le *le;
 	int err;
-
-	(void) arg;
-
-	debug("sync_b2bua: play_list\n");
 
 	err = odict_alloc(&od_resp, 1);
 	err |= odict_alloc(&od_array, MAX_SESSIONS);
@@ -691,7 +552,6 @@ static int play_list(struct re_printf *pf, void *arg)
 	}
 
  out:
-	mem_deref(od);
 	mem_deref(od_resp);
 	mem_deref(od_array);
 
@@ -703,17 +563,14 @@ static int play_list(struct re_printf *pf, void *arg)
  * Get the RTP capabilities of the baresip instance
  *
  * @param pf  Print handler for debug output
- * @param arg JSON containing command arguments
  *
  * @return 0 if success, otherwise errorcode
  */
-static int rtp_capabilities(struct re_printf *pf, void *arg)
+int rtp_capabilities(struct re_printf *pf)
 {
 	struct nosip_call *call;
 	struct mbuf *mb;
 	int err;
-
-	(void)arg;
 
 	err = nosip_call_alloc(&call, "capabilities", true /* offer */);
 	if (err) {
@@ -740,68 +597,38 @@ static int rtp_capabilities(struct re_printf *pf, void *arg)
 /**
  * Add a source into the mixer.
  *
- * @param pf  Print handler for debug output
- * @param arg JSON containing command arguments
- *
+ * @param pf           Print handler for debug output
  * @param id           ID for the nosip call to be created
  * @param [sip_callid] ID of the SIP call to be connected to
  * @param desc         SDP offer
  *
  * @return 0 if success, otherwise errorcode
  */
-static int mixer_source_add(struct re_printf *pf, void *arg)
+int mixer_source_add(struct re_printf *pf, const char *id,
+		   const char *sip_callid, const char *desc)
 {
-	const struct cmd_arg *carg = arg;
-	const char *param = carg->prm;
-	struct odict *od = NULL;
-	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
 	struct session *sess = NULL;
 	struct nosip_call *nosip_call = NULL;
 	struct mixer_source *mixer_source = NULL;
-	char *sip_callid;
-	struct mbuf *mb = NULL;
+	struct mbuf *mb;
 	int err;
 
 	(void)pf;
 
-	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		goto out;
-	}
-
-	oe_id = odict_lookup(od, "id");
-	oe_desc = odict_lookup(od, "desc");
-	if (!oe_id || !oe_desc) {
-		warning("sync_b2bua: missing json entries\n");
-		err = EINVAL;
-		goto out;
-	}
-
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	if (oe_sip_callid && oe_sip_callid->type == ODICT_STRING)
-		sip_callid = oe_sip_callid->u.str;
-	else
-		sip_callid = NULL;
-
-	debug("sync_b2bua: mixer_source_add:  id='%s', sip_callid:'%s'\n",
-	      oe_id ? oe_id->u.str : "", sip_callid ? sip_callid : "");
-
 	/* Copy the SDP string into a memory buffer */
-	mb = mbuf_alloc(str_len(oe_desc->u.str));
+	mb = mbuf_alloc(str_len(desc));
 	if (!mb) {
 		err = ENOMEM;
 		goto out;
 	}
 
-	err = mbuf_write_str(mb, oe_desc->u.str);
+	err = mbuf_write_str(mb, desc);
 	if (err) {
 		goto out;
 	}
 
 	/* Create a nosip call */
-	nosip_call_alloc(&nosip_call, oe_id->u.str, false /* offer */);
+	nosip_call_alloc(&nosip_call, id, false /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		goto out;
@@ -831,7 +658,7 @@ static int mixer_source_add(struct re_printf *pf, void *arg)
 	 * */
 	if (!sip_callid)
 	{
-		err = mixer_source_alloc(&mixer_source, mixer, oe_id->u.str,
+		err = mixer_source_alloc(&mixer_source, mixer, id,
 				nosip_call, NULL);
 		if (err) {
 			warning("sync_b2bua: mixer_source_alloc failed (%m)\n", err);
@@ -841,7 +668,7 @@ static int mixer_source_add(struct re_printf *pf, void *arg)
 	else
 	{
 		/* Check that SIP call exist for the given SIP callid */
-		sess = get_session_by_sip_callid(oe_sip_callid->u.str);
+		sess = get_session_by_sip_callid(sip_callid);
 		if (!sess) {
 			warning("sync_b2bua: no session found for the given SIP callid: %s\n",
 					sip_callid);
@@ -849,7 +676,7 @@ static int mixer_source_add(struct re_printf *pf, void *arg)
 			goto out;
 		}
 
-		err = mixer_source_alloc(&mixer_source, mixer, oe_id->u.str,
+		err = mixer_source_alloc(&mixer_source, mixer, id,
 				nosip_call, call_audio(sess->sip_call));
 		if (err) {
 			warning("sync_b2bua: mixer_source_alloc failed (%m)\n", err);
@@ -857,10 +684,10 @@ static int mixer_source_add(struct re_printf *pf, void *arg)
 		}
 
 		/* Reset the 'ausrc' device name of the sip call audio */
-		audio_set_devicename(call_audio(sess->sip_call), oe_id->u.str, "");
+		audio_set_devicename(call_audio(sess->sip_call), id, "");
 
 		/* Set audio source to the just allocated one */
-		err = audio_set_source(call_audio(sess->sip_call), "aumix", oe_id->u.str);
+		err = audio_set_source(call_audio(sess->sip_call), "aumix", id);
 		if (err) {
 			warning("mixer_source: audio_set_source failed (%m)\n", err);
 			goto out;
@@ -870,10 +697,10 @@ static int mixer_source_add(struct re_printf *pf, void *arg)
 	list_append(&mixer_sourcel, &mixer_source->le, mixer_source);
 
 	/* Set the audio play device name */
-	audio_set_devicename(nosip_call_audio(nosip_call), "", oe_id->u.str);
+	audio_set_devicename(nosip_call_audio(nosip_call), "", id);
 
 	/* Set audio player to the just allocated one */
-	err = audio_set_player(nosip_call_audio(nosip_call), "aumix", oe_id->u.str);
+	err = audio_set_player(nosip_call_audio(nosip_call), "aumix", id);
 	if (err) {
 		warning("mixer_source: audio_set_player failed (%m)\n", err);
 		goto out;
@@ -892,7 +719,6 @@ static int mixer_source_add(struct re_printf *pf, void *arg)
 	if (err)
 		mem_deref(nosip_call);
 
-	mem_deref(od);
 	mem_deref(mb);
 
 	return err;
@@ -902,71 +728,29 @@ static int mixer_source_add(struct re_printf *pf, void *arg)
 /**
  * Delete a source from the mixer.
  *
- * @param pf  Print handler for debug output
- * @param arg JSON containing command arguments
- *
+ * @param pf Print handler for debug output
  * @param id ID for the mixer source to be deleted
  *
  * @return 0 if success, otherwise errorcode
  */
-static int mixer_source_del(struct re_printf *pf, void *arg)
+int mixer_source_del(struct re_printf *pf, const char *id)
 {
-	const struct cmd_arg *carg = arg;
-	const char *param = carg->prm;
-	struct odict *od = NULL;
-	const struct odict_entry *oe_id;
-	struct mixer_source *src = NULL;
-	int err;
+	struct mixer_source *src;
 
 	(void)pf;
 
-	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
-
-	oe_id = odict_lookup(od, "id");
-	if (!oe_id || oe_id->type != ODICT_STRING) {
-		warning("sync_b2bua: missing json entries\n");
-		err = EINVAL;
-		goto out;
-	}
-
-	debug("sync_b2bua: mixer_source_del:  id='%s'\n",
-	      oe_id ? oe_id->u.str : "");
-
 	/* Check that a mixer source exists for the given id */
-	src = get_mixer_source_by_id(oe_id->u.str);
+	src = get_mixer_source_by_id(id);
 	if (!src) {
 		warning("sync_b2bua: no mixer source found for the given id: %s\n",
-				oe_id->u.str);
-		err = EINVAL;
-		goto out;
+				id);
+		return ENOENT;
 	}
 
 	mem_deref(src);
 
- out:
-	mem_deref(od);
-
-	return err;
+	return 0;
 }
-
-
-static const struct cmd cmdv[] = {
-	{"sync_b2bua_status",      0,       0, "B2UA status",      sync_b2bua_status  },
-	{"play_start",             0, CMD_PRM, "Play start",       play_start         },
-	{"play_stop",              0, CMD_PRM, "Play stop",        play_stop          },
-	{"play_list",              0,       0, "Play list",        play_list          },
-	{"sip_call_hangup",        0, CMD_PRM, "Call hangup",      sip_call_hangup    },
-	{"nosip_call_create",      0, CMD_PRM, "Call create",      nosip_call_create  },
-	{"nosip_call_connect",     0, CMD_PRM, "Call connect",     nosip_call_connect },
-	{"nosip_rtp_capabilities", 0,       0, "RTP capabilities", rtp_capabilities   },
-	{"mixer_source_add",       0,       0, "Source add",       mixer_source_add   },
-	{"mixer_source_del",       0,       0, "Source delete",    mixer_source_del   },
-};
 
 
 static int module_init(void)
@@ -980,7 +764,7 @@ static int module_init(void)
 		return ENOENT;
 	}
 
-	err = cmd_register(baresip_commands(), cmdv, ARRAY_SIZE(cmdv));
+	err = cmd_register(baresip_commands(), cmdv, command_count);
 	if (err)
 		return err;
 
