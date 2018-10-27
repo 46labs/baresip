@@ -5,6 +5,6 @@
 #
 
 MOD		:= sync_b2bua
-$(MOD)_SRCS	+= sync_b2bua.c nosip_call.c mixer_source.c device.c src.c play.c
+$(MOD)_SRCS	+= sync_b2bua.c commands.c nosip_call.c mixer_source.c device.c src.c play.c
 
 include mk/mod.mk
