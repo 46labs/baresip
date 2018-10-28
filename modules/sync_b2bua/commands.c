@@ -163,7 +163,10 @@ static int cmd_sip_call_hangup(struct re_printf *pf, void *arg)
 	const char *param = carg->prm;
 	struct odict *od;
 	const struct odict_entry *oe_sip_callid, *oe_reason;
+	const char *reason;
 	int err;
+
+	(void)pf;
 
 	/* Retrieve command params */
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
@@ -173,13 +176,27 @@ static int cmd_sip_call_hangup(struct re_printf *pf, void *arg)
 	}
 
 	oe_sip_callid = odict_lookup(od, "sip_callid");
+	if (!oe_sip_callid) {
+		warning("sync_b2bua: missing json entries\n");
+		err = EINVAL;
+		goto out;
+	}
+
 	oe_reason = odict_lookup(od, "reason");
+	if (oe_reason && oe_reason->type == ODICT_STRING)
+		reason = oe_reason->u.str;
+	else
+		reason = NULL;
 
-	debug("sync_b2bua: sip_call_hangup:  id='%s'\n",
-	      oe_sip_callid ? oe_sip_callid->u.str : "");
+	debug("sync_b2bua: sip_call_hangup: id='%s', reason='%s'\n",
+	      oe_sip_callid ? oe_sip_callid->u.str : "", reason);
 
-	err = sip_call_hangup(pf, oe_sip_callid->u.str, oe_reason->u.str);
+	err = sip_call_hangup(oe_sip_callid->u.str, reason);
+	if (err) {
+		goto out;
+	}
 
+ out:
 	mem_deref(od);
 
 	return err;

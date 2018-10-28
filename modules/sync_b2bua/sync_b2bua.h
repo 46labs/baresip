@@ -46,8 +46,7 @@ int nosip_call_create(struct mbuf **mb, const char *id,
 		   const char *sip_callid);
 int nosip_call_connect(const char *id, const char *sip_callid,
 		   struct mbuf *mb);
-int sip_call_hangup(struct re_printf *pf, const char *sip_callid,
-		   const char *reason);
+int sip_call_hangup(const char *sip_callid, const char *reason);
 int status(struct re_printf *pf);
 int play_start(struct re_printf *pf, const char *sip_callid,
 		   const char *file, bool loop);
