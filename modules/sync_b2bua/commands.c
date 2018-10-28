@@ -236,6 +236,8 @@ static int cmd_play_start(struct re_printf *pf, void *arg)
 	bool loop;
 	int err;
 
+	(void)pf;
+
 	/* Retrieve command params */
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
 	if (err) {
@@ -261,7 +263,7 @@ static int cmd_play_start(struct re_printf *pf, void *arg)
 			oe_file ? oe_file->u.str : "",
 			loop);
 
-	err = play_start(pf, oe_sip_callid->u.str, oe_file->u.str, loop);
+	err = play_start(oe_sip_callid->u.str, oe_file->u.str, loop);
 
  out:
 	mem_deref(od);
