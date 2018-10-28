@@ -24,6 +24,9 @@ static int cmd_nosip_call_create(struct re_printf *pf, void *arg)
 	const char *param = carg->prm;
 	struct odict *od;
 	const struct odict_entry *oe_id, *oe_sip_callid;
+	struct odict *od_resp = NULL;
+	struct mbuf *mb = NULL;
+	char *desc = NULL;
 	int err;
 
 	/* Retrieve command params */
@@ -45,10 +48,32 @@ static int cmd_nosip_call_create(struct re_printf *pf, void *arg)
 			oe_id ? oe_id->u.str : "",
 			oe_sip_callid ? oe_sip_callid->u.str : "");
 
-	err = nosip_call_create(pf, oe_id->u.str, oe_sip_callid->u.str);
+	/* Create nosip call */
+	err = nosip_call_create(&mb, oe_id->u.str, oe_sip_callid->u.str);
+	if (err) {
+		warning("sync_b2bua: nosip_call_create failed (%m)\n", err);
+		goto out;
+	}
+
+	/* Prepare response */
+	err = odict_alloc(&od_resp, 1);
+	if (err)
+		goto out;
+
+	err |= mbuf_strdup(mb, &desc, mb->end);
+	err |= odict_entry_add(od_resp, "desc", ODICT_STRING, desc);
+
+	err = json_encode_odict(pf, od_resp);
+	if (err) {
+		warning("sync_b2bua: json_encode_odict failed (%m)\n", err);
+		goto out;
+	}
 
  out:
 	mem_deref(od);
+	mem_deref(od_resp);
+	mem_deref(mb);
+	mem_deref(desc);
 
 	return err;
 }

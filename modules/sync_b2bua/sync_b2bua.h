@@ -42,7 +42,7 @@ void nosip_audio_start(const struct nosip_call *call);
 extern const struct cmd cmdv[];
 extern const size_t command_count;
 
-int nosip_call_create(struct re_printf *pf, const char *id,
+int nosip_call_create(struct mbuf **mb, const char *id,
 		   const char *sip_callid);
 int nosip_call_connect(struct re_printf *pf, const char *id,
 		   const char *sip_callid, const char *desc);
