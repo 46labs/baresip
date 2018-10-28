@@ -477,6 +477,8 @@ static int cmd_mixer_source_del(struct re_printf *pf, void *arg)
 	const struct odict_entry *oe_id;
 	int err;
 
+	(void)pf;
+
 	/* Retrieve command params */
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
 	if (err) {
@@ -494,7 +496,7 @@ static int cmd_mixer_source_del(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: mixer_source_del:  id='%s'\n",
 	      oe_id ? oe_id->u.str : "");
 
-	err = mixer_source_del(pf, oe_id->u.str);
+	err = mixer_source_del(oe_id->u.str);
 
  out:
 	mem_deref(od);

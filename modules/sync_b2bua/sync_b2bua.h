@@ -57,4 +57,4 @@ int play_list(struct odict *od_array);
 int rtp_capabilities(struct re_printf *pf);
 int mixer_source_add(struct mbuf **answer, const char *id,
 		   const char *sip_callid, struct mbuf *offer);
-int mixer_source_del(struct re_printf *pf, const char *id);
+int mixer_source_del(const char *id);
