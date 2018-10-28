@@ -44,8 +44,8 @@ extern const size_t command_count;
 
 int nosip_call_create(struct mbuf **mb, const char *id,
 		   const char *sip_callid);
-int nosip_call_connect(struct re_printf *pf, const char *id,
-		   const char *sip_callid, const char *desc);
+int nosip_call_connect(const char *id, const char *sip_callid,
+		   struct mbuf *mb);
 int sip_call_hangup(struct re_printf *pf, const char *sip_callid,
 		   const char *reason);
 int status(struct re_printf *pf);
