@@ -23,7 +23,7 @@ static int cmd_nosip_call_create(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od;
-	const struct odict_entry *oe_id, *oe_sip_callid;
+	const char *id, *sip_callid;
 	struct odict *od_resp = NULL;
 	struct mbuf *mb = NULL;
 	char *desc = NULL;
@@ -36,20 +36,19 @@ static int cmd_nosip_call_create(struct re_printf *pf, void *arg)
 		return err;
 	}
 
-	oe_id = odict_lookup(od, "id");
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	if (!oe_id || !oe_sip_callid) {
+	id = odict_string(od, "id");
+	sip_callid = odict_string(od, "sip_callid");
+	if (!id || !sip_callid) {
 		warning("sync_b2bua: missing json entries\n");
 		err = EINVAL;
 		goto out;
 	}
 
 	debug("sync_b2bua: nosip_call_create: id='%s', sip_callid:'%s'\n",
-			oe_id ? oe_id->u.str : "",
-			oe_sip_callid ? oe_sip_callid->u.str : "");
+			id, sip_callid);
 
 	/* Create nosip call */
-	err = nosip_call_create(&mb, oe_id->u.str, oe_sip_callid->u.str);
+	err = nosip_call_create(&mb, id, sip_callid);
 	if (err) {
 		warning("sync_b2bua: nosip_call_create failed (%m)\n", err);
 		goto out;
@@ -96,7 +95,7 @@ static int cmd_nosip_call_connect(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od;
-	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
+	const char *id, *sip_callid, *desc;
 	struct mbuf *mb = NULL;
 	int err;
 
@@ -109,32 +108,32 @@ static int cmd_nosip_call_connect(struct re_printf *pf, void *arg)
 		return err;
 	}
 
-	oe_id = odict_lookup(od, "id");
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	oe_desc = odict_lookup(od, "desc");
-	if (!oe_id || !oe_sip_callid || !oe_desc) {
+	id = odict_string(od, "id");
+	sip_callid = odict_string(od, "sip_callid");
+	desc = odict_string(od, "desc");
+	if (!id || !sip_callid || !desc) {
 		warning("sync_b2bua: missing json entries\n");
 		err = EINVAL;
 		goto out;
 	}
 
 	debug("sync_b2bua: nosip_call_connect:  id='%s', sip_callid:'%s'\n",
-	      oe_id ? oe_id->u.str : "", oe_sip_callid ? oe_sip_callid->u.str : "");
+	      id, sip_callid);
 
 	/* Copy the SDP string into a memory buffer */
-	mb = mbuf_alloc(str_len(oe_desc->u.str));
+	mb = mbuf_alloc(str_len(desc));
 	if (!mb) {
 		err = ENOMEM;
 		goto out;
 	}
 
-	err = mbuf_write_str(mb, oe_desc->u.str);
+	err = mbuf_write_str(mb, desc);
 	if (err) {
 		goto out;
 	}
 
 	/* Connect the nosip_call() */
-	err = nosip_call_connect(oe_id->u.str, oe_sip_callid->u.str, mb);
+	err = nosip_call_connect(id, sip_callid, mb);
 	if (err) {
 		goto out;
 	}
@@ -162,8 +161,7 @@ static int cmd_sip_call_hangup(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od;
-	const struct odict_entry *oe_sip_callid, *oe_reason;
-	const char *reason;
+	const char *sip_callid, *reason;
 	int err;
 
 	(void)pf;
@@ -175,23 +173,19 @@ static int cmd_sip_call_hangup(struct re_printf *pf, void *arg)
 		return err;
 	}
 
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	if (!oe_sip_callid) {
+	sip_callid = odict_string(od, "sip_callid");
+	if (!sip_callid) {
 		warning("sync_b2bua: missing json entries\n");
 		err = EINVAL;
 		goto out;
 	}
 
-	oe_reason = odict_lookup(od, "reason");
-	if (oe_reason && oe_reason->type == ODICT_STRING)
-		reason = oe_reason->u.str;
-	else
-		reason = NULL;
+	reason = odict_string(od, "reason");
 
 	debug("sync_b2bua: sip_call_hangup: id='%s', reason='%s'\n",
-	      oe_sip_callid ? oe_sip_callid->u.str : "", reason);
+	      sip_callid, reason);
 
-	err = sip_call_hangup(oe_sip_callid->u.str, reason);
+	err = sip_call_hangup(sip_callid, reason);
 	if (err) {
 		goto out;
 	}
@@ -232,7 +226,7 @@ static int cmd_play_start(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od;
-	const struct odict_entry *oe_sip_callid, *oe_file, *oe_loop;
+	const char *sip_callid, *file;
 	bool loop;
 	int err;
 
@@ -245,25 +239,19 @@ static int cmd_play_start(struct re_printf *pf, void *arg)
 		return err ;
 	}
 
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	oe_file       = odict_lookup(od, "file");
-	if (!oe_sip_callid || !oe_file) {
+	sip_callid = odict_string(od, "sip_callid");
+	file = odict_string(od, "file");
+	if (!sip_callid || !file) {
 		warning("sync_b2bua: missing json entries\n");
 		goto out;
 	}
 
-	oe_loop = odict_lookup(od, "loop");
-	if (oe_loop && oe_loop->type == ODICT_BOOL)
-		loop = oe_loop->u.boolean;
-	else
-		loop = false;
+	odict_get_boolean(od, &loop, "loop");
 
 	debug("sync_b2bua: play_start: sip_callid:'%s', file:'%s', loop:'%d'\n",
-			oe_sip_callid ? oe_sip_callid->u.str : "",
-			oe_file ? oe_file->u.str : "",
-			loop);
+			sip_callid, file, loop);
 
-	err = play_start(oe_sip_callid->u.str, oe_file->u.str, loop);
+	err = play_start(sip_callid, file, loop);
 
  out:
 	mem_deref(od);
@@ -287,7 +275,7 @@ static int cmd_play_stop(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od;
-	const struct odict_entry *oe_sip_callid;
+	const char *sip_callid;
 	int err;
 
 	(void)pf;
@@ -299,16 +287,16 @@ static int cmd_play_stop(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	if (!oe_sip_callid) {
+	sip_callid = odict_string(od, "sip_callid");
+	if (!sip_callid) {
 		warning("sync_b2bua: missing json entries\n");
 		goto out;
 	}
 
 	debug("sync_b2bua: play_stop: sip_callid:'%s'\n",
-			oe_sip_callid ? oe_sip_callid->u.str : "");
+			sip_callid);
 
-	err = play_stop(oe_sip_callid->u.str);
+	err = play_stop(sip_callid);
 
  out:
 	mem_deref(od);
@@ -401,9 +389,8 @@ static int cmd_mixer_source_add(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od;
-	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
+	const char *id, *sip_callid, *desc;
 	struct mbuf *offer = NULL, *answer = NULL;
-	char *sip_callid;
 	int err;
 
 	/* Retrieve command params */
@@ -413,36 +400,32 @@ static int cmd_mixer_source_add(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	oe_id = odict_lookup(od, "id");
-	oe_desc = odict_lookup(od, "desc");
-	if (!oe_id || !oe_desc) {
+	id = odict_string(od, "id");
+	desc = odict_string(od, "desc");
+	if (!id || !desc) {
 		warning("sync_b2bua: missing json entries\n");
 		err = EINVAL;
 		goto out;
 	}
 
-	oe_sip_callid = odict_lookup(od, "sip_callid");
-	if (oe_sip_callid && oe_sip_callid->type == ODICT_STRING)
-		sip_callid = oe_sip_callid->u.str;
-	else
-		sip_callid = NULL;
+	sip_callid = odict_string(od, "sip_callid");
 
 	debug("sync_b2bua: mixer_source_add:  id='%s', sip_callid:'%s'\n",
-	      oe_id ? oe_id->u.str : "", sip_callid ? sip_callid : "");
+	      id, sip_callid);
 
 	/* Copy the SDP offer string into a memory buffer */
-	offer = mbuf_alloc(str_len(oe_desc->u.str));
+	offer = mbuf_alloc(str_len(desc));
 	if (!offer) {
 		err = ENOMEM;
 		goto out;
 	}
 
-	err = mbuf_write_str(offer, oe_desc->u.str);
+	err = mbuf_write_str(offer, desc);
 	if (err) {
 		goto out;
 	}
 
-	err = mixer_source_add(&answer, oe_id->u.str, sip_callid, offer);
+	err = mixer_source_add(&answer, id, sip_callid, offer);
 	if (err) {
 		warning("sync_b2bua: mixer_source_add failed (%m)\n", err);
 		goto out;
@@ -478,7 +461,7 @@ static int cmd_mixer_source_del(struct re_printf *pf, void *arg)
 	const struct cmd_arg *carg = arg;
 	const char *param = carg->prm;
 	struct odict *od;
-	const struct odict_entry *oe_id;
+	const char *id;
 	int err;
 
 	(void)pf;
@@ -490,17 +473,17 @@ static int cmd_mixer_source_del(struct re_printf *pf, void *arg)
 		return err;
 	}
 
-	oe_id = odict_lookup(od, "id");
-	if (!oe_id || oe_id->type != ODICT_STRING) {
+	id = odict_string(od, "id");
+	if (!id) {
 		warning("sync_b2bua: missing json entries\n");
 		err = EINVAL;
 		goto out;
 	}
 
 	debug("sync_b2bua: mixer_source_del:  id='%s'\n",
-	      oe_id ? oe_id->u.str : "");
+	      id);
 
-	err = mixer_source_del(oe_id->u.str);
+	err = mixer_source_del(id);
 
  out:
 	mem_deref(od);
