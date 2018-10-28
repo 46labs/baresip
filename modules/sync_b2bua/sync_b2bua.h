@@ -3,6 +3,8 @@
 #include <baresip.h>
 
 
+extern const int MAX_SESSIONS;
+
 /*
  * Mixer source
  */
@@ -51,7 +53,7 @@ int status(struct re_printf *pf);
 int play_start(struct re_printf *pf, const char *sip_callid,
 		   const char *file, bool loop);
 int play_stop(struct re_printf *pf, const char *sip_callid);
-int play_list(struct re_printf *pf);
+int play_list(struct odict *od_array);
 int rtp_capabilities(struct re_printf *pf);
 int mixer_source_add(struct re_printf *pf, const char *id,
 		   const char *sip_callid, const char *desc);

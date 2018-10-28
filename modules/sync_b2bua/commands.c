@@ -323,13 +323,38 @@ static int cmd_play_stop(struct re_printf *pf, void *arg)
  */
 static int cmd_play_list(struct re_printf *pf, void *arg)
 {
+	struct odict *od_resp, *od_array;
 	int err;
 
+	(void)pf;
 	(void)arg;
+
+	err = odict_alloc(&od_resp, 1);
+	err |= odict_alloc(&od_array, MAX_SESSIONS);
+	if (err)
+		goto out;
+
+	err = odict_entry_add(od_resp, "list", ODICT_ARRAY, od_array);
+	if (err)
+		goto out;
 
 	debug("sync_b2bua: play_list\n");
 
-	err = play_list(pf);
+	err = play_list(od_array);
+	if (err) {
+		warning("sync_b2bua: play_list failed (%m)\n", err);
+		goto out;
+	}
+
+	err = json_encode_odict(pf, od_resp);
+	if (err) {
+		warning("sync_b2bua: failed to encode json (%m)\n", err);
+		goto out;
+	}
+
+ out:
+	mem_deref(od_resp);
+	mem_deref(od_array);
 
 	return err;
 }
