@@ -29,7 +29,7 @@ struct session {
 };
 
 static struct list sessionl;
-static struct ua *ua_in;
+static struct ua *sip_ua;
 
 static struct ausrc *ausrc;
 static struct auplay *auplay;
@@ -294,9 +294,6 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 		goto out;
 	}
 
-	/* TMP */
-	/* nosip_call_sdp_media_debug(sess->nosip_call); */
-
  out:
 	if (err)
 		mem_deref(sess);
@@ -326,7 +323,7 @@ int sip_call_hangup(const char *sip_callid, const char *reason)
 	}
 
 	/* Hangup the call */
-	ua_hangup(ua_in, sess->sip_call, 0 /* code */, reason);
+	ua_hangup(sip_ua, sess->sip_call, 0 /* code */, reason);
 
 	return 0;
 }
@@ -335,32 +332,40 @@ int sip_call_hangup(const char *sip_callid, const char *reason)
 int status(struct re_printf *pf)
 {
 	struct le *le;
+	int i;
 	int err = 0;
 
-	err |= re_hprintf(pf, "B2BUA status:\n");
-	err |= re_hprintf(pf, "  SIP UA:  %s\n", ua_aor(ua_in));
+	err |= re_hprintf(pf, "Sessions: (%zu)\n\n", list_count(&sessionl));
 
-	err |= re_hprintf(pf, "sessions:\n");
-
-	for (le = sessionl.head; le; le = le->next) {
+	for (le = sessionl.head, i=1; le; le = le->next, i++) {
 		struct session *sess = le->data;
 
-		err |= re_hprintf(pf, "SIP call (%s)\n", call_peeruri(sess->sip_call));
+		err |= re_hprintf(pf, "----------------- %d (%s)-----------------\n\n",
+				i, call_peeruri(sess->sip_call));
+		err |= re_hprintf(pf, "SIP call:\n\n");
 		err |= re_hprintf(pf, "%H\n", call_status, sess->sip_call);
 		err |= re_hprintf(pf, "%H\n", audio_debug, call_audio(sess->sip_call));
 
-		err |= re_hprintf(pf, "noSIP call  \n");
+		err |= re_hprintf(pf, "noSIP call:\n");
 		err |= re_hprintf(pf, "%H\n", audio_debug, nosip_call_audio(sess->nosip_call));
+
+		if (err)
+			goto out;
 	}
 
-	err |= re_hprintf(pf, "Mixer: (%zup)\n", aumix_source_count(mixer));
+	err |= re_hprintf(pf, "Mixer: (%zup)\n\n", aumix_source_count(mixer));
 
-	for (le = mixer_sourcel.head; le; le = le->next) {
+	for (le = mixer_sourcel.head, i=1; le; le = le->next, i++) {
 		struct mixer_source *src = le->data;
 
+		err |= re_hprintf(pf, "----------------- %d -----------------\n", i);
 		err |= re_hprintf(pf, "%H\n", audio_debug, nosip_call_audio(src->nosip_call));
+
+		if (err)
+			goto out;
 	}
 
+ out:
 	return err;
 }
 
@@ -619,9 +624,6 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 		goto out;
 	}
 
-	/* TMP */
-	warning("-----  AUMIX COUNT  ------: '%zu'\n", aumix_source_count(mixer));
-
  out:
 	if (err)
 		mem_deref(nosip_call);
@@ -659,9 +661,9 @@ static int module_init(void)
 {
 	int err;
 
-	ua_in = uag_find_param("b2bua", "inbound");
+	sip_ua = uag_find_param("b2bua", "inbound");
 
-	if (!ua_in) {
+	if (!sip_ua) {
 		warning("sync_b2bua: inbound UA not found\n");
 		return ENOENT;
 	}
@@ -675,7 +677,7 @@ static int module_init(void)
 		return err;
 
 	/* The inbound UA will handle all non-matching requests */
-	ua_set_catchall(ua_in, true);
+	ua_set_catchall(sip_ua, true);
 
 	/* Register the mixer source and player */
 	err = ausrc_register(&ausrc, baresip_ausrcl(), "aumix", src_alloc);
