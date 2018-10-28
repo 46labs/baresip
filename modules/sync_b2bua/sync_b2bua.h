@@ -55,6 +55,6 @@ int play_start(struct re_printf *pf, const char *sip_callid,
 int play_stop(struct re_printf *pf, const char *sip_callid);
 int play_list(struct odict *od_array);
 int rtp_capabilities(struct re_printf *pf);
-int mixer_source_add(struct re_printf *pf, const char *id,
-		   const char *sip_callid, const char *desc);
+int mixer_source_add(struct mbuf **answer, const char *id,
+		   const char *sip_callid, struct mbuf *offer);
 int mixer_source_del(struct re_printf *pf, const char *id);

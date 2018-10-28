@@ -534,54 +534,37 @@ int rtp_capabilities(struct re_printf *pf)
 /**
  * Add a source into the mixer.
  *
- * @param pf           Print handler for debug output
+ * @param answer       Pointer to the SDP answer mbuf
  * @param id           ID for the nosip call to be created
  * @param [sip_callid] ID of the SIP call to be connected to
- * @param desc         SDP offer
+ * @param offer        SDP offer mbuf
  *
  * @return 0 if success, otherwise errorcode
  */
-int mixer_source_add(struct re_printf *pf, const char *id,
-		   const char *sip_callid, const char *desc)
+int mixer_source_add(struct mbuf **answer, const char *id,
+		   const char *sip_callid, struct mbuf *offer)
 {
 	struct session *sess = NULL;
 	struct nosip_call *nosip_call = NULL;
 	struct mixer_source *mixer_source = NULL;
-	struct mbuf *mb;
 	int err;
 
-	(void)pf;
-
-	/* Copy the SDP string into a memory buffer */
-	mb = mbuf_alloc(str_len(desc));
-	if (!mb) {
-		err = ENOMEM;
-		goto out;
-	}
-
-	err = mbuf_write_str(mb, desc);
-	if (err) {
-		goto out;
-	}
-
 	/* Create a nosip call */
-	nosip_call_alloc(&nosip_call, id, false /* offer */);
+	err = nosip_call_alloc(&nosip_call, id, false /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		goto out;
 	}
 
 	/* Accept the call with the remote SDP */
-	nosip_call_accept(nosip_call, mb, true /* offer */);
+	err = nosip_call_accept(nosip_call, offer, true /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_accept failed (%m)\n", err);
 		goto out;
 	}
 
 	/* Retrieve SDP answer */
-	mem_deref(mb);
-
-	err = nosip_call_sdp_get(nosip_call, &mb, false /* offer */);
+	err = nosip_call_sdp_get(nosip_call, answer, false /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_sdp_get failed (%m)\n", err);
 		goto out;
@@ -646,17 +629,9 @@ int mixer_source_add(struct re_printf *pf, const char *id,
 	/* TMP */
 	warning("-----  AUMIX COUNT  ------: '%zu'\n", aumix_source_count(mixer));
 
-	/* Prepare the response */
-	err = re_hprintf(pf, "%b", mb->buf, mb->end);
-	if (err)
-		warning("sync_b2bua: re_hprintf failed (%m)\n", err);
-		goto out;
-
  out:
 	if (err)
 		mem_deref(nosip_call);
-
-	mem_deref(mb);
 
 	return err;
 }
