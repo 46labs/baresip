@@ -50,8 +50,7 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 		   struct mbuf *mb);
 int sip_call_hangup(const char *sip_callid, const char *reason);
 int status(struct re_printf *pf);
-int play_start(struct re_printf *pf, const char *sip_callid,
-		   const char *file, bool loop);
+int play_start(const char *sip_callid, const char *file, bool loop);
 int play_stop(const char *sip_callid);
 int play_list(struct odict *od_array);
 int rtp_capabilities(struct re_printf *pf);

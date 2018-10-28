@@ -368,15 +368,13 @@ int status(struct re_printf *pf)
 /**
  * Start playing a file on a SIP call
  *
- * @param pf         Print handler for debug output
  * @param sip_callid ID of the SIP call
  * @param file       Name of the file to be played
  * @param loop       True if the file is to be played on loop
  *
  * @return 0 if success, otherwise errorcode
  */
-int play_start(struct re_printf *pf, const char *sip_callid,
-		   const char *file, bool loop)
+int play_start(const char *sip_callid, const char *file, bool loop)
 {
 	static const char module[9] = "aubridge";
 
@@ -384,8 +382,6 @@ int play_start(struct re_printf *pf, const char *sip_callid,
 	struct session *sess;
 	char device[64];
 	int err;
-
-	(void)pf;
 
 	/* Check that a SIP call exists for the given SIP callid */
 	sess = get_session_by_sip_callid(sip_callid);
