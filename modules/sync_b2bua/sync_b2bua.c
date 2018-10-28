@@ -640,16 +640,13 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 /**
  * Delete a source from the mixer.
  *
- * @param pf Print handler for debug output
  * @param id ID for the mixer source to be deleted
  *
  * @return 0 if success, otherwise errorcode
  */
-int mixer_source_del(struct re_printf *pf, const char *id)
+int mixer_source_del(const char *id)
 {
 	struct mixer_source *src;
-
-	(void)pf;
 
 	/* Check that a mixer source exists for the given id */
 	src = get_mixer_source_by_id(id);
