@@ -313,12 +313,9 @@ int nosip_call_connect(const char *id, const char *sip_callid,
  *
  * @return 0 if success, otherwise errorcode
  */
-int sip_call_hangup(struct re_printf *pf, const char *sip_callid,
-		   const char *reason)
+int sip_call_hangup(const char *sip_callid, const char *reason)
 {
 	struct session *sess;
-
-	(void)pf;
 
 	/* Check that SIP call exist for the given id */
 	sess = get_session_by_sip_callid(sip_callid);
