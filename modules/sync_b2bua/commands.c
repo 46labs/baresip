@@ -128,15 +128,13 @@ static int cmd_nosip_call_connect(struct re_printf *pf, void *arg)
 	}
 
 	err = mbuf_write_str(mb, desc);
-	if (err) {
+	if (err)
 		goto out;
-	}
 
 	/* Connect the nosip_call() */
 	err = nosip_call_connect(id, sip_callid, mb);
-	if (err) {
+	if (err)
 		goto out;
-	}
 
  out:
 	mem_deref(od);
@@ -186,9 +184,8 @@ static int cmd_sip_call_hangup(struct re_printf *pf, void *arg)
 	      sip_callid, reason);
 
 	err = sip_call_hangup(sip_callid, reason);
-	if (err) {
+	if (err)
 		goto out;
-	}
 
  out:
 	mem_deref(od);
@@ -421,9 +418,8 @@ static int cmd_mixer_source_add(struct re_printf *pf, void *arg)
 	}
 
 	err = mbuf_write_str(offer, desc);
-	if (err) {
+	if (err)
 		goto out;
-	}
 
 	err = mixer_source_add(&answer, id, sip_callid, offer);
 	if (err) {
@@ -433,9 +429,10 @@ static int cmd_mixer_source_add(struct re_printf *pf, void *arg)
 
 	/* Prepare the response */
 	err = re_hprintf(pf, "%b", answer->buf, answer->end);
-	if (err)
+	if (err) {
 		warning("sync_b2bua: re_hprintf failed (%m)\n", err);
 		goto out;
+	}
 
  out:
 	mem_deref(od);

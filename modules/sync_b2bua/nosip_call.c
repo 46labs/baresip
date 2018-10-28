@@ -12,8 +12,8 @@
 
 struct nosip_call {
 	char *id;                /**< nosip call id */
-	struct sdp_session *sdp; /**< SDP Session  */
 	struct audio *audio;     /**< Audio stream */
+	struct sdp_session *sdp; /**< SDP Session  */
 };
 
 static void nosip_call_destructor(void *arg)
@@ -34,7 +34,8 @@ static int print_handler(const char *p, size_t size, void *arg)
 	return mbuf_write_mem(mb, (uint8_t *)p, size);
 }
 
-int nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc, bool offer)
+int nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc,
+		   bool offer)
 {
 	int err;
 
@@ -90,8 +91,9 @@ int nosip_call_sdp_media_debug(const struct nosip_call *call)
 /**
  * Allocate a new nosip Call state object
  *
- * @param callp       Pointer to allocated nosip Call state object
- * @param offer     Boolean
+ * @param callp  Pointer to allocated nosip Call state object
+ * @param id     Id for the new call
+ * @param offer  Boolean
  *
  * @return 0 if success, otherwise errorcode
  */
@@ -166,7 +168,7 @@ const char *nosip_call_id(const struct nosip_call *call)
 
 
 /**
- * Accept a call. Provide the remote SDP
+ * Accept the call
  */
 int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
 {
@@ -174,14 +176,7 @@ int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
 
 	debug("nosip_call_accept\n");
 
-	/*
-	info("- - - - - S D P - %s - - - - -\n"
-	     "%b"
-	     "- - - - - - - - - - - - - - - - - - -\n",
-	     offer ? "O f f e r" : "A n s w e r", desc->buf, desc->end);
-	*/
-
-	/* reset buffer possition. */
+	/* reset buffer possition */
 	desc->pos = 0;
 
 	err = sdp_decode(call->sdp, desc, offer);
