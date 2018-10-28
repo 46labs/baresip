@@ -19,7 +19,7 @@
  * 1 session object has 2 call objects (SIP call, noSIP call)
  */
 
-static int MAX_SESSIONS = 100;
+const int MAX_SESSIONS = 100;
 
 struct session {
 	struct le le;
@@ -476,20 +476,10 @@ int play_stop(struct re_printf *pf, const char *sip_callid)
  *
  * @return 0 if success, otherwise errorcode
  */
-int play_list(struct re_printf *pf)
+int play_list(struct odict *od_array)
 {
-	struct odict *od_resp, *od_array;
 	struct le *le;
 	int err;
-
-	err = odict_alloc(&od_resp, 1);
-	err |= odict_alloc(&od_array, MAX_SESSIONS);
-	if (err)
-		goto out;
-
-	err = odict_entry_add(od_resp, "list", ODICT_ARRAY, od_array);
-	if (err)
-		goto out;
 
 	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
 		struct session *sess = le->data;
@@ -497,22 +487,12 @@ int play_list(struct re_printf *pf)
 		if (!sess->play)
 			continue;
 
-		err |= odict_entry_add(od_array, "", ODICT_STRING, call_id(sess->sip_call));
+		err = odict_entry_add(od_array, "", ODICT_STRING, call_id(sess->sip_call));
 		if (err)
-			goto out;
+			return err;
 	}
 
-	err = json_encode_odict(pf, od_resp);
-	if (err) {
-		warning("sync_b2bua: failed to encode json (%m)\n", err);
-		goto out;
-	}
-
- out:
-	mem_deref(od_resp);
-	mem_deref(od_array);
-
-	return err;
+	return 0;
 }
 
 
