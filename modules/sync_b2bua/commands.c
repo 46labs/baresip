@@ -398,6 +398,7 @@ static int cmd_mixer_source_add(struct re_printf *pf, void *arg)
 	const char *param = carg->prm;
 	struct odict *od;
 	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
+	struct mbuf *offer = NULL, *answer = NULL;
 	char *sip_callid;
 	int err;
 
@@ -425,10 +426,34 @@ static int cmd_mixer_source_add(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: mixer_source_add:  id='%s', sip_callid:'%s'\n",
 	      oe_id ? oe_id->u.str : "", sip_callid ? sip_callid : "");
 
-	err = mixer_source_add(pf, oe_id->u.str, sip_callid, oe_desc->u.str);
+	/* Copy the SDP offer string into a memory buffer */
+	offer = mbuf_alloc(str_len(oe_desc->u.str));
+	if (!offer) {
+		err = ENOMEM;
+		goto out;
+	}
+
+	err = mbuf_write_str(offer, oe_desc->u.str);
+	if (err) {
+		goto out;
+	}
+
+	err = mixer_source_add(&answer, oe_id->u.str, sip_callid, offer);
+	if (err) {
+		warning("sync_b2bua: mixer_source_add failed (%m)\n", err);
+		goto out;
+	}
+
+	/* Prepare the response */
+	err = re_hprintf(pf, "%b", answer->buf, answer->end);
+	if (err)
+		warning("sync_b2bua: re_hprintf failed (%m)\n", err);
+		goto out;
 
  out:
 	mem_deref(od);
+	mem_deref(offer);
+	mem_deref(answer);
 
 	return err;
 }
