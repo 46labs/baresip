@@ -231,22 +231,18 @@ int nosip_call_create(struct mbuf **mb, const char *id,
 /**
  * Connect a nosip call with the corresponding SIP call
  *
- * @param pf         Print handler for debug output
  * @param id         ID for the nosip call to be created
  * @param sip_callid ID of the SIP call to be connected to
- * @param desc       SDP answer
+ * @param mb         SDP answer
  *
  * @return 0 if success, otherwise errorcode
  */
-int nosip_call_connect(struct re_printf *pf, const char *id,
-		   const char *sip_callid, const char *desc)
+int nosip_call_connect(const char *id, const char *sip_callid,
+		   struct mbuf *mb)
 {
 	struct session *sess;
-	struct mbuf *mb = NULL;
 	char a[64], b[64];
 	int err;
-
-	(void)pf;
 
 	/* Check that nosip call exist for the given id */
 	sess = get_session_by_nosip_callid(id);
@@ -269,20 +265,8 @@ int nosip_call_connect(struct re_printf *pf, const char *id,
 	/* Stop any ongoing play file */
 	sess->play = mem_deref(sess->play);
 
-	/* Copy the SDP string into a memory buffer */
-	mb = mbuf_alloc(str_len(desc));
-	if (!mb) {
-		err = ENOMEM;
-		goto out;
-	}
-
-	err = mbuf_write_str(mb, desc);
-	if (err) {
-		goto out;
-	}
-
 	/* Accept the call with the remote SDP */
-	nosip_call_accept(sess->nosip_call, mb, false);
+	err = nosip_call_accept(sess->nosip_call, mb, false);
 	if (err) {
 		warning("sync_b2bua: nosip_call_accept failed (%m)\n", err);
 		goto out;
@@ -316,8 +300,6 @@ int nosip_call_connect(struct re_printf *pf, const char *id,
  out:
 	if (err)
 		mem_deref(sess);
-
-	mem_deref(mb);
 
 	return err;
 }

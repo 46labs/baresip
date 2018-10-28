@@ -97,7 +97,10 @@ static int cmd_nosip_call_connect(struct re_printf *pf, void *arg)
 	const char *param = carg->prm;
 	struct odict *od;
 	const struct odict_entry *oe_id, *oe_sip_callid, *oe_desc;
+	struct mbuf *mb = NULL;
 	int err;
+
+	(void)pf;
 
 	/* Retrieve command params */
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
@@ -118,10 +121,27 @@ static int cmd_nosip_call_connect(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: nosip_call_connect:  id='%s', sip_callid:'%s'\n",
 	      oe_id ? oe_id->u.str : "", oe_sip_callid ? oe_sip_callid->u.str : "");
 
-	err = nosip_call_connect(pf, oe_id->u.str, oe_sip_callid->u.str, oe_desc->u.str);
+	/* Copy the SDP string into a memory buffer */
+	mb = mbuf_alloc(str_len(oe_desc->u.str));
+	if (!mb) {
+		err = ENOMEM;
+		goto out;
+	}
+
+	err = mbuf_write_str(mb, oe_desc->u.str);
+	if (err) {
+		goto out;
+	}
+
+	/* Connect the nosip_call() */
+	err = nosip_call_connect(oe_id->u.str, oe_sip_callid->u.str, mb);
+	if (err) {
+		goto out;
+	}
 
  out:
 	mem_deref(od);
+	mem_deref(mb);
 
 	return err;
 }
