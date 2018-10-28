@@ -288,6 +288,8 @@ static int cmd_play_stop(struct re_printf *pf, void *arg)
 	const struct odict_entry *oe_sip_callid;
 	int err;
 
+	(void)pf;
+
 	/* Retrieve command params */
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
 	if (err) {
@@ -304,7 +306,7 @@ static int cmd_play_stop(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: play_stop: sip_callid:'%s'\n",
 			oe_sip_callid ? oe_sip_callid->u.str : "");
 
-	err = play_stop(pf, oe_sip_callid->u.str);
+	err = play_stop(oe_sip_callid->u.str);
 
  out:
 	mem_deref(od);
