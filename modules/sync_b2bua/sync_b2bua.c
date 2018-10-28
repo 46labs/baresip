@@ -177,19 +177,16 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 /**
  * Create a nosip call state object
  *
- * @param pf         Print handler for debug output
+ * @param mb         Pointer to the SDP offer memory buffer
  * @param id         ID for the nosip call to be created
  * @param sip_callid ID of the SIP call to be connected to
  *
  * @return 0 if success, otherwise errorcode
  */
-int nosip_call_create(struct re_printf *pf, const char *id,
+int nosip_call_create(struct mbuf **mb, const char *id,
 		   const char *sip_callid)
 {
-	struct odict *od_resp = NULL;
 	struct session *sess;
-	struct mbuf *mb = NULL;
-	char *sdp = NULL;
 	int err;
 
 	/* Check that no nosip call exists for the given id */
@@ -210,41 +207,22 @@ int nosip_call_create(struct re_printf *pf, const char *id,
 		goto out;
 	}
 
-	/* Create a nosip call */
+	/* Create nosip call */
 	err = nosip_call_alloc(&sess->nosip_call, id, true /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		goto out;
 	}
 
-	/* Prepare response */
-	err = odict_alloc(&od_resp, 1);
-	if (err)
-		goto out;
-
-	err |= nosip_call_sdp_get(sess->nosip_call, &mb, true /* offer */);
+	err |= nosip_call_sdp_get(sess->nosip_call, mb, true /* offer */);
 	if (err) {
-		warning("sync_b2bua: failed to get SDP (%m)\n", err);
-		goto out;
-	}
-
-	err |= mbuf_strdup(mb, &sdp, mb->end);
-	err |= odict_entry_add(od_resp, "desc", ODICT_STRING, sdp);
-
-	err = json_encode_odict(pf, od_resp);
-	if (err) {
-		warning("sync_b2bua: failed to encode json (%m)\n", err);
+		warning("sync_b2bua: nosip_call_sdp_get failed (%m)\n", err);
 		goto out;
 	}
 
  out:
 	if (err)
 		mem_deref(sess);
-
-	mem_deref(od_resp);
-
-	mem_deref(mb);
-	mem_deref(sdp);
 
 	return err;
 }
