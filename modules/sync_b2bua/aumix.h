@@ -4,6 +4,7 @@
  * Copyright (C) 2018 46labs
  */
 
+#include <pthread.h>
 
 struct device;
 struct aumix;
