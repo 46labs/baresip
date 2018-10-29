@@ -165,7 +165,7 @@ int aubridge_device_connect(struct device **devp, const char *device,
 		dev->ausrc = ausrc;
 
 	/* wait until we have both SRC+PLAY */
-	if (dev->ausrc && dev->auplay && !dev->run) {
+	if (dev->ausrc && dev->auplay && !dev->thread) {
 
 		dev->run = true;
 		err = pthread_create(&dev->thread, NULL, device_thread, dev);
