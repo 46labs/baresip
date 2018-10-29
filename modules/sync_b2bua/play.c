@@ -64,7 +64,6 @@ int play_alloc(struct auplay_st **stp, const struct auplay *ap,
 {
 	struct auplay_st *st;
 	struct device *dev;
-	int num_frames;
 	int err;
 
 	if (!stp || !ap || !prm || !wh)
@@ -102,8 +101,6 @@ int play_alloc(struct auplay_st **stp, const struct auplay *ap,
 	warning("------------\n");
 
 	st->sampc = prm->srate * prm->ch * prm->ptime / 1000;
-	num_frames = st->prm.srate * st->prm.ptime / 1000;
-
 	st->sampv = mem_alloc(aufmt_sample_size(prm->fmt) * st->sampc, NULL);
 	if (!st->sampv) {
 		err = ENOMEM;
