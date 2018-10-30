@@ -547,6 +547,12 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 	struct mixer_source *mixer_source = NULL;
 	int err;
 
+	/* Check that a mixer source does not exist for the given id */
+	if (get_mixer_source_by_id(id)) {
+		warning("sync_b2bua: mixer source found for the given id: %s\n",
+				id);
+		return ENOENT;
+	}
 	/* Create a nosip call */
 	err = nosip_call_alloc(&nosip_call, id, false /* offer */);
 	if (err) {
