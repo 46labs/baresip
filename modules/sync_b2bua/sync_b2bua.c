@@ -196,7 +196,7 @@ int nosip_call_create(struct mbuf **mb, const char *id,
 	if (sess) {
 		warning("sync_b2bua: session found for the given nosip callid: %s\n",
 			id);
-		err = ENOENT;
+		err = EINVAL;
 		goto out;
 	}
 
@@ -205,7 +205,7 @@ int nosip_call_create(struct mbuf **mb, const char *id,
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
 				sip_callid);
-		err = ENOENT;
+		err = EINVAL;
 		goto out;
 	}
 
@@ -251,7 +251,7 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given nosip call id: %s\n",
 				id);
-		err = ENOENT;
+		err = EINVAL;
 		goto out;
 	}
 
@@ -331,7 +331,7 @@ int sip_call_hangup(const char *sip_callid, const char *reason)
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given SIP call id: %s\n",
 				sip_callid);
-		return ENOENT;
+		return EINVAL;
 	}
 
 	/* Hangup the call */
@@ -405,7 +405,7 @@ int play_start(const char *sip_callid, const char *file, bool loop)
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
 				sip_callid);
-		err = ENOENT;
+		err = EINVAL;
 		goto out;
 	}
 
@@ -470,7 +470,7 @@ int play_stop(const char *sip_callid)
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
 				sip_callid);
-		return ENOENT;
+		return EINVAL;
 	}
 
 	sess->play = mem_deref(sess->play);
@@ -563,7 +563,7 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 	if (get_mixer_source_by_id(id)) {
 		warning("sync_b2bua: mixer source found for the given id: %s\n",
 				id);
-		return ENOENT;
+		return EINVAL;
 	}
 	/* Create a nosip call */
 	err = nosip_call_alloc(&nosip_call, id, false /* offer */);
@@ -666,7 +666,7 @@ int mixer_source_del(const char *id)
 	if (!src) {
 		warning("sync_b2bua: no mixer source found for the given id: %s\n",
 				id);
-		return ENOENT;
+		return EINVAL;
 	}
 
 	mem_deref(src);
