@@ -26,6 +26,7 @@ struct session {
 	struct play *play;              /** Play instance for audio files */
 	struct call *sip_call;          /** SIP call instance */
 	struct nosip_call *nosip_call;  /** nosip call instance */
+	bool connected;
 };
 
 static struct list sessionl;
@@ -114,6 +115,7 @@ static int new_session(struct call *call)
 	mem_ref(call);
 
 	sess->sip_call = call;
+	sess->connected = false;
 
 	ua_answer(call_get_ua(call), call);
 
@@ -258,8 +260,16 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 	if (!sess) {
 		warning("sync_b2bua: no session found for the given callid: %s\n",
 				sip_callid);
-		err = ENOENT;
+		err = EINVAL;
 		goto out;
+	}
+
+	if (sess->connected) {
+		warning("sync_b2bua: nosip_call already connected: %s\n",
+				id);
+		err = EINVAL;
+		goto out;
+
 	}
 
 	/* Stop any ongoing play file */
@@ -271,6 +281,8 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 		warning("sync_b2bua: nosip_call_accept failed (%m)\n", err);
 		goto out;
 	}
+
+	sess->connected = true;
 
 	/**
 	 * audio player for SIP call: b
