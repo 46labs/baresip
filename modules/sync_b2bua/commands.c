@@ -489,6 +489,44 @@ static int cmd_mixer_source_del(struct re_printf *pf, void *arg)
 }
 
 
+/**
+ * Play an audio file into the mixer.
+ *
+ * @param file  Name of the file to be played
+ *
+ * @return 0 if success, otherwise errorcode
+ */
+static int cmd_mixer_play(struct re_printf *pf, void *arg)
+{
+	const struct cmd_arg *carg = arg;
+	const char *param = carg->prm;
+	struct odict *od;
+	const char *file;
+	int err;
+
+	(void)pf;
+
+	/* Retrieve command params */
+	err = json_decode_odict(&od, 32, param, str_len(param), 16);
+	if (err) {
+		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+		return err;
+	}
+
+	file = odict_string(od, "file");
+	if (!file) {
+		warning("sync_b2bua: missing json entries\n");
+		err = EINVAL;
+		goto out;
+	}
+
+	err = mixer_play(file);
+
+ out:
+	return err;
+}
+
+
 const struct cmd cmdv[] = {
 	{"sync_b2bua_status",      0,       0, "B2UA status",   cmd_status             },
 	{"play_start",             0, CMD_PRM, "Play start",    cmd_play_start         },
@@ -500,6 +538,7 @@ const struct cmd cmdv[] = {
 	{"nosip_rtp_capabilities", 0,       0, "Capabilities",  cmd_rtp_capabilities   },
 	{"mixer_source_add",       0,       0, "Source add",    cmd_mixer_source_add   },
 	{"mixer_source_del",       0,       0, "Source delete", cmd_mixer_source_del   },
+	{"mixer_play",             0,       0, "Mixer play",    cmd_mixer_play         },
 };
 
 const size_t command_count = ARRAY_SIZE(cmdv);
