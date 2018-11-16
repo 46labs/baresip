@@ -587,11 +587,6 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 	}
 
 	/* Create a mixer source */
-	/*
-	 * NOTE: Why not create the nosip_call inside mixer_source_alloc?
-	 * nosip_call instance is a member of the mixer_source and it dereferences
-	 * the nosip_call on destruction
-	 * */
 	if (!sip_callid)
 	{
 		err = mixer_source_alloc(&mixer_source, mixer, id,
