@@ -662,6 +662,29 @@ int mixer_source_del(const char *id)
 }
 
 
+/**
+ * Play an audio file into the mixer.
+ *
+ * @param file  Name of the file to be played
+ *
+ * @return 0 if success, otherwise errorcode
+ */
+int mixer_play(const char *file)
+{
+	struct config *cfg = conf_config();
+	char filepath[256];
+	int err;
+
+	re_snprintf(filepath, sizeof(filepath), "%s/%s", cfg->audio.audio_path, file);
+
+	err = aumix_playfile(mixer, filepath);
+	if (err)
+		warning("sync_b2bua: mixer_play failed (%m)\n", err);
+
+	return err;
+}
+
+
 static int module_init(void)
 {
 	struct config *cfg = conf_config();
