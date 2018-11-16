@@ -95,11 +95,6 @@ int play_alloc(struct auplay_st **stp, const struct auplay *ap,
 	st->wh  = wh;
 	st->arg = arg;
 
-	warning("------------\n");
-	warning("srate: %d, ch: %zu, ptime: %zu\n",
-			st->prm.srate, st->prm.ch, st->prm.ptime);
-	warning("------------\n");
-
 	st->sampc = prm->srate * prm->ch * prm->ptime / 1000;
 	st->sampv = mem_alloc(aufmt_sample_size(prm->fmt) * st->sampc, NULL);
 	if (!st->sampv) {
