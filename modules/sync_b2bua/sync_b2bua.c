@@ -243,7 +243,7 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 		   struct mbuf *mb)
 {
 	struct session *sess;
-	char a[64], b[64];
+	char device[64];
 	int err;
 
 	/* Check that nosip call exist for the given id */
@@ -285,22 +285,14 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 	sess->connected = true;
 
 	/**
-	 * audio player for SIP call: b
-	 * audio source for nosip call: b
-	 *
-	 * RTP coming from SIP call, is the souce of the nosip call
+	 * The audio coming from SIP call is the souce of nosip call:
 	 * (audio player SIP call -> audio source nosip call)
 	 */
-	re_snprintf(a, sizeof(a), "mixer_src-%x", call_id(sess->sip_call));
-	re_snprintf(b, sizeof(b), "sip_to_nosip-%x", call_id(sess->sip_call));
-
-	/* Connect the audio/video-bridge devices */
-	/* audio_set_devicename(call_audio(sess->sip_call), a, b); */
-	/* audio_set_devicename(nosip_call_audio(sess->nosip_call), b, a); */
+	re_snprintf(device, sizeof(device), "sip_to_nosip-%x", call_id(sess->sip_call));
 
 	/* Set SIP call audio player to noSIP call audio source */
-	err = audio_set_player(call_audio(sess->sip_call), "aubridge", b);
-	err |= audio_set_source(nosip_call_audio(sess->nosip_call), "aubridge", b);
+	err = audio_set_player(call_audio(sess->sip_call), "aubridge", device);
+	err |= audio_set_source(nosip_call_audio(sess->nosip_call), "aubridge", device);
 	if (err) {
 		warning("sync_b2bua: audio_set_player failed (%m)\n", err);
 		goto out;
