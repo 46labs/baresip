@@ -677,6 +677,8 @@ int mixer_source_del(const char *id)
 
 static int module_init(void)
 {
+	struct config *cfg = conf_config();
+	uint32_t srate = cfg->audio.srate_play;
 	int err;
 
 	sip_ua = uag_find_param("b2bua", "inbound");
@@ -704,7 +706,7 @@ static int module_init(void)
 		return err;
 
 	/* Start audio mixer */
-	err = aumix_alloc(&mixer, 8000 /* srate */, 1 /* channels */, 20 /* ptime */);
+	err = aumix_alloc(&mixer, srate, 1 /* channels */, 20 /* ptime */);
 	if (err)
 		return err;
 
