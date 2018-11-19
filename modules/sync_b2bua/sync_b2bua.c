@@ -14,9 +14,31 @@
  * @defgroup sync_b2bua sync_b2bua
  *
  * Sync Back-to-Back User-Agent (B2BUA) module
+ */
+
+/**
  *
- * N session objects
- * 1 session object has 2 call objects (SIP call, noSIP call)
+ \verbatim
+
+ SIP Audio -> nosip Audio pipeline (aubridge audio driver):
+
+        .--------.   .----------.   .-------.
+        |        |   |          |   |       |
+ RTP -->| auplay |-->| aubridge |-->| ausrc |---> RTP
+        |        |   |          |   |       |
+        '--------'   '----------'   '-------'
+
+
+ nosip Audio -> SIP Audio pipeline (aumix audio driver):
+
+        .--------.   .-------.   .-------.
+        |        |   |       |   |       |
+ RTP -->| auplay |-->| aumix |-->| ausrc |---> RTP
+        |        |   |       |   |       |
+        '--------'   '-------'   '-------'
+
+ \endverbatim
+ *
  */
 
 const int MAX_SESSIONS = 100;
