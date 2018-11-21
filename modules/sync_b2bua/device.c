@@ -153,7 +153,13 @@ void device_set_ausrc(struct device *dev, struct ausrc_st *ausrc)
 	if (!dev)
 		return;
 
+	/* Stop the device to avoid 'aumix_frame_handler' from being executed */
+	device_stop(dev);
+
 	dev->ausrc = ausrc;
+
+	if (ausrc)
+		device_start(dev);
 }
 
 
