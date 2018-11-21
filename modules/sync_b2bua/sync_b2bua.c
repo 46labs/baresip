@@ -685,6 +685,96 @@ int mixer_source_del(const char *id)
 
 
 /**
+ * Enable a mixer source.
+ *
+ * @param id           ID for the mixer source to be deleted
+ * @param [sip_callid] ID of the SIP call source of the audio
+ *
+ * @return 0 if success, otherwise errorcode
+ */
+int mixer_source_enable(const char *id, const char *sip_callid)
+{
+	struct mixer_source *src;
+	struct aumix_source *aumix_src;
+	struct session *sess;
+	int err = 0;
+
+	/* Check that a mixer source exists for the given id */
+	src = get_mixer_source_by_id(id);
+	if (!src) {
+		warning("sync_b2bua: no mixer source found for the given id: %s\n",
+				id);
+		return EINVAL;
+	}
+
+	aumix_src = device_aumix_src(src->dev);
+	if (!aumix_src)
+		goto out;
+
+	if (sip_callid) {
+		/* Check that SIP call exist for the given SIP callid */
+		sess = get_session_by_sip_callid(sip_callid);
+		if (!sess) {
+			warning("sync_b2bua: no session found for the given SIP callid: %s\n",
+					sip_callid);
+			err = EINVAL;
+			goto out;
+		}
+
+		/* Reset the 'ausrc' device name of the sip call audio */
+		audio_set_devicename(call_audio(sess->sip_call), id, "");
+
+		/*
+		 * Set audio source accordingly
+		 * By setting the corresponding aumix audio source, the aumix_source
+		 * will be enabled.
+		 */
+		err = audio_set_source(call_audio(sess->sip_call), "aumix", id);
+		if (err) {
+			warning("mixer_source: audio_set_source failed (%m)\n", err);
+			goto out;
+		}
+	}
+	else {
+		/* Explicitly enable the aumix source */
+		aumix_source_enable(aumix_src, true);
+	}
+
+out:
+	return err;
+}
+
+/**
+ * Disable a mixer source.
+ *
+ * @param id ID for the mixer source to be deleted
+ *
+ * @return 0 if success, otherwise errorcode
+ */
+int mixer_source_disable(const char *id)
+{
+       struct mixer_source *src;
+       struct aumix_source *aumix_src;
+
+       /* Check that a mixer source exists for the given id */
+       src = get_mixer_source_by_id(id);
+       if (!src) {
+               warning("sync_b2bua: no mixer source found for the given id: %s\n",
+                               id);
+               return EINVAL;
+       }
+
+       aumix_src = device_aumix_src(src->dev);
+       if (!aumix_src)
+               goto out;
+
+       aumix_source_enable(aumix_src, false);
+
+ out:
+       return 0;
+}
+
+/**
  * Play an audio file into the mixer.
  *
  * @param file  Name of the file to be played

@@ -57,4 +57,6 @@ int rtp_capabilities(struct re_printf *pf);
 int mixer_source_add(struct mbuf **answer, const char *id,
 		   const char *sip_callid, struct mbuf *offer);
 int mixer_source_del(const char *id);
+int mixer_source_enable(const char *id, const char *sip_callid);
+int mixer_source_disable(const char *id);
 int mixer_play(const char *file);

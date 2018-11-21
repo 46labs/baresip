@@ -490,6 +490,103 @@ static int cmd_mixer_source_del(struct re_printf *pf, void *arg)
 
 
 /**
+ * Enable a mixer source.
+ *
+ * @param pf  Print handler for debug output
+ * @param arg JSON containing command arguments
+ *
+ * @param id           ID for the nosip call to be created
+ * @param [sip_callid] ID of the SIP call source of the audio
+ *
+ * @return 0 if success, otherwise errorcode
+ */
+static int cmd_mixer_source_enable(struct re_printf *pf, void *arg)
+{
+	const struct cmd_arg *carg = arg;
+	const char *param = carg->prm;
+	struct odict *od;
+	const char *id, *sip_callid;
+	int err;
+
+	(void)pf;
+
+	/* Retrieve command params */
+	err = json_decode_odict(&od, 32, param, str_len(param), 16);
+	if (err) {
+		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+		goto out;
+	}
+
+	id = odict_string(od, "id");
+	if (!id) {
+		warning("sync_b2bua: missing json entries\n");
+		err = EINVAL;
+		goto out;
+	}
+
+	sip_callid = odict_string(od, "sip_callid");
+
+	debug("sync_b2bua: mixer_source_enable:  id='%s', sip_callid:'%s'\n",
+	      id, sip_callid);
+
+	err = mixer_source_enable(id, sip_callid);
+	if (err) {
+		warning("sync_b2bua: mixer_source_enable failed (%m)\n", err);
+		goto out;
+	}
+
+ out:
+	mem_deref(od);
+
+	return err;
+}
+
+
+/**
+ * Disable a mixer source.
+ *
+ * @param pf  Print handler for debug output
+ * @param arg JSON containing command arguments
+ *
+ * @param id ID for the mixer source to be deleted
+ *
+ * @return 0 if success, otherwise errorcode
+ */
+static int cmd_mixer_source_disable(struct re_printf *pf, void *arg)
+{
+	const struct cmd_arg *carg = arg;
+	const char *param = carg->prm;
+	struct odict *od;
+	const char *id;
+	int err;
+
+	(void)pf;
+
+	/* Retrieve command params */
+	err = json_decode_odict(&od, 32, param, str_len(param), 16);
+	if (err) {
+		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+		return err;
+	}
+
+	id = odict_string(od, "id");
+	if (!id) {
+		warning("sync_b2bua: missing json entries\n");
+		err = EINVAL;
+		goto out;
+	}
+
+	debug("sync_b2bua: mixer_source_disable:  id='%s'\n",
+	      id);
+
+	err = mixer_source_disable(id);
+
+ out:
+	mem_deref(od);
+
+	return err;
+}
+/**
  * Play an audio file into the mixer.
  *
  * @param file  Name of the file to be played
@@ -528,17 +625,19 @@ static int cmd_mixer_play(struct re_printf *pf, void *arg)
 
 
 const struct cmd cmdv[] = {
-	{"sync_b2bua_status",      0,       0, "B2UA status",   cmd_status             },
-	{"play_start",             0, CMD_PRM, "Play start",    cmd_play_start         },
-	{"play_stop",              0, CMD_PRM, "Play stop",     cmd_play_stop          },
-	{"play_list",              0,       0, "Play list",     cmd_play_list          },
-	{"sip_call_hangup",        0, CMD_PRM, "Call hangup",   cmd_sip_call_hangup    },
-	{"nosip_call_create",      0, CMD_PRM, "Call create",   cmd_nosip_call_create  },
-	{"nosip_call_connect",     0, CMD_PRM, "Call connect",  cmd_nosip_call_connect },
-	{"nosip_rtp_capabilities", 0,       0, "Capabilities",  cmd_rtp_capabilities   },
-	{"mixer_source_add",       0,       0, "Source add",    cmd_mixer_source_add   },
-	{"mixer_source_del",       0,       0, "Source delete", cmd_mixer_source_del   },
-	{"mixer_play",             0,       0, "Mixer play",    cmd_mixer_play         },
+	{"sync_b2bua_status",      0,       0, "B2UA status", cmd_status               },
+	{"play_start",             0, CMD_PRM, "Play start",  cmd_play_start           },
+	{"play_stop",              0, CMD_PRM, "Play stop",   cmd_play_stop            },
+	{"play_list",              0,       0, "Play list",   cmd_play_list            },
+	{"sip_call_hangup",        0, CMD_PRM, "Call hangup", cmd_sip_call_hangup      },
+	{"nosip_call_create",      0, CMD_PRM, "Call create", cmd_nosip_call_create    },
+	{"nosip_call_connect",     0, CMD_PRM, "Call conn.",  cmd_nosip_call_connect   },
+	{"nosip_rtp_capabilities", 0,       0, "RTP capab.",  cmd_rtp_capabilities     },
+	{"mixer_source_add",       0, CMD_PRM, "Src add",     cmd_mixer_source_add     },
+	{"mixer_source_del",       0, CMD_PRM, "Src delete",  cmd_mixer_source_del     },
+	{"mixer_source_enable",    0, CMD_PRM, "Src enable",  cmd_mixer_source_enable  },
+	{"mixer_source_disable",   0, CMD_PRM, "Src disable", cmd_mixer_source_disable },
+	{"mixer_play",             0, CMD_PRM, "Mixer play",   cmd_mixer_play          },
 };
 
 const size_t command_count = ARRAY_SIZE(cmdv);
