@@ -51,17 +51,6 @@ static void aumix_frame_handler(const int16_t *sampv, size_t sampc, void *arg)
 }
 
 
-static void fake_aumix_frame_handler(const int16_t *sampv, size_t sampc,
-		   void *arg)
-{
-	(void)sampv;
-	(void)sampc;
-	(void)arg;
-
-	/* debug("fake_aumix_frame_handler. sampc: '%zu'\n", sampc); */
-}
-
-
 /**
  * Allocate a device
  *
@@ -92,7 +81,7 @@ int device_alloc(struct device **devp, struct aumix *mixer,
 
 	/* Create the aumix source */
 	err = aumix_source_alloc(&dev->aumix_src, mixer,
-			enable_src ? aumix_frame_handler : fake_aumix_frame_handler,
+			enable_src ? aumix_frame_handler : NULL,
 			enable_src ? dev : NULL);
 	if (err) {
 		warning("aumix: aumix_source_alloc failed (%m)\n", err);
