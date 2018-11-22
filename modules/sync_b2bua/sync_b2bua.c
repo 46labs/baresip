@@ -740,7 +740,7 @@ int mixer_source_enable(const char *id, const char *sip_callid)
 		aumix_source_enable(aumix_src, true);
 	}
 
-out:
+ out:
 	return err;
 }
 
@@ -753,25 +753,25 @@ out:
  */
 int mixer_source_disable(const char *id)
 {
-       struct mixer_source *src;
-       struct aumix_source *aumix_src;
+	struct mixer_source *src;
+	struct aumix_source *aumix_src;
 
-       /* Check that a mixer source exists for the given id */
-       src = get_mixer_source_by_id(id);
-       if (!src) {
-               warning("sync_b2bua: no mixer source found for the given id: %s\n",
-                               id);
-               return EINVAL;
-       }
+	/* Check that a mixer source exists for the given id */
+	src = get_mixer_source_by_id(id);
+	if (!src) {
+		warning("sync_b2bua: no mixer source found for the given id: %s\n",
+				id);
+		return EINVAL;
+	}
 
-       aumix_src = device_aumix_src(src->dev);
-       if (!aumix_src)
-               goto out;
+	aumix_src = device_aumix_src(src->dev);
+	if (!aumix_src)
+		goto out;
 
-       aumix_source_enable(aumix_src, false);
+	aumix_source_enable(aumix_src, false);
 
  out:
-       return 0;
+	return 0;
 }
 
 /**
