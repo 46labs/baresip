@@ -586,6 +586,7 @@ static int cmd_mixer_source_disable(struct re_printf *pf, void *arg)
 
 	return err;
 }
+
 /**
  * Play an audio file into the mixer.
  *
@@ -620,6 +621,8 @@ static int cmd_mixer_play(struct re_printf *pf, void *arg)
 	err = mixer_play(file);
 
  out:
+	mem_deref(od);
+
 	return err;
 }
 
