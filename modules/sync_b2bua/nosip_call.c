@@ -61,7 +61,7 @@ int nosip_call_sdp_debug(const struct nosip_call *call, bool offer)
 
 	info("- - - - - S D P - %s - - - - -\n"
 	     "%b"
-	     "- - - - - - - - - - - - - - - - - - -\n",
+	     " - - - - - - - - - - - - - - -\n",
 	     offer ? "O f f e r" : "A n s w e r", desc->buf, desc->end);
 
 	mem_deref(desc);
@@ -156,8 +156,6 @@ int nosip_call_alloc(struct nosip_call **callp, const char* id, bool offer)
  */
 struct audio *nosip_call_audio(const struct nosip_call *call)
 {
-	debug("nosip_call_audio\n");
-
 	return call ? call->audio : NULL;
 }
 
@@ -173,8 +171,6 @@ const char *nosip_call_id(const struct nosip_call *call)
 int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
 {
 	int err;
-
-	debug("nosip_call_accept\n");
 
 	/* reset buffer possition */
 	desc->pos = 0;
@@ -199,8 +195,6 @@ void nosip_audio_start(const struct nosip_call *call)
 	const struct sdp_media *m;
 	const struct sdp_format *sc;
 	int err;
-
-	debug("nosip_audio_start\n");
 
 	/* media attributes */
 	audio_sdp_attr_decode(call->audio);
