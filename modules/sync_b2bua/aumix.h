@@ -40,8 +40,8 @@ int src_alloc(struct ausrc_st **stp, const struct ausrc *as,
 
 int device_alloc(struct device **devp, struct aumix* mixer,
 		   const char *name, bool enable_src);
-int device_start(struct device *dev);
-int device_stop(struct device *dev);
+int device_enable(struct device *dev);
+int device_disable(struct device *dev);
 struct device *device_find(const char *name);
 void device_set_ausrc(struct device *st, struct ausrc_st *ausrc);
 struct aumix_source *device_aumix_src(struct device *dev);

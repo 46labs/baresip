@@ -100,7 +100,7 @@ int device_alloc(struct device **devp, struct aumix *mixer,
 	return 0;
 }
 
-int device_start(struct device *dev)
+int device_enable(struct device *dev)
 {
 	if (!dev)
 		return ENOENT;
@@ -111,7 +111,7 @@ int device_start(struct device *dev)
 }
 
 
-int device_stop(struct device *dev)
+int device_disable(struct device *dev)
 {
 	if (!dev)
 		return ENOENT;
@@ -142,13 +142,13 @@ void device_set_ausrc(struct device *dev, struct ausrc_st *ausrc)
 	if (!dev)
 		return;
 
-	/* Stop the device to avoid 'aumix_frame_handler' from being executed */
-	device_stop(dev);
+	/* Disable the device to avoid 'aumix_frame_handler' from being executed */
+	device_disable(dev);
 
 	dev->ausrc = ausrc;
 
 	if (ausrc)
-		device_start(dev);
+		device_enable(dev);
 }
 
 
