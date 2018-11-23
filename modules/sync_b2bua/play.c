@@ -75,11 +75,6 @@ int play_alloc(struct auplay_st **stp, const struct auplay *ap,
 		return ENOENT;
 	}
 
-	if (!device_aumix_src(dev)) {
-		warning("aumix: device has no aumix source (%s)\n", device);
-		return ENOENT;
-	}
-
 	if (prm->fmt != AUFMT_S16LE) {
 		warning("aumix: unsupported sample format (%s)\n",
 			aufmt_name(prm->fmt));
