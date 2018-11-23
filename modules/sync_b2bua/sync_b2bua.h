@@ -3,7 +3,7 @@
 #include <baresip.h>
 
 
-extern const int MAX_SESSIONS;
+size_t session_count(void);
 
 /*
  * Mixer source
