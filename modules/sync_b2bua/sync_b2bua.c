@@ -21,7 +21,6 @@
  \verbatim
 
  SIP Audio -> nosip Audio pipeline (aubridge audio driver):
-
         .--------.   .----------.   .-------.
         |        |   |          |   |       |
  RTP -->| auplay |-->| aubridge |-->| ausrc |---> RTP
@@ -30,7 +29,6 @@
 
 
  nosip Audio -> SIP Audio pipeline (aumix audio driver):
-
         .--------.   .-------.   .-------.
         |        |   |       |   |       |
  RTP -->| auplay |-->| aumix |-->| ausrc |---> RTP
