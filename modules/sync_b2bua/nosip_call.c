@@ -1,5 +1,5 @@
 /**
- * @file nosip_call.c noSIP call state
+ * @file nosip_call.c nosip call state
  *
  * Copyright (C) 2018 46labs
  */
