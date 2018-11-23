@@ -315,7 +315,7 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 	 */
 	re_snprintf(device, sizeof(device), "sip_to_nosip-%x", call_id(sess->sip_call));
 
-	/* Set SIP call audio player to noSIP call audio source */
+	/* Set SIP call audio player to nosip call audio source */
 	err = audio_set_player(call_audio(sess->sip_call), "aubridge", device);
 	err |= audio_set_source(nosip_call_audio(sess->nosip_call), "aubridge", device);
 	if (err) {
@@ -375,7 +375,7 @@ int status(struct re_printf *pf)
 		err |= re_hprintf(pf, "%H\n", call_status, sess->sip_call);
 		err |= re_hprintf(pf, "%H\n", audio_debug, call_audio(sess->sip_call));
 
-		err |= re_hprintf(pf, "noSIP call:\n");
+		err |= re_hprintf(pf, "nosip call:\n");
 		err |= re_hprintf(pf, "%H\n", audio_debug, nosip_call_audio(sess->nosip_call));
 
 		if (err)
