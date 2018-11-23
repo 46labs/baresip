@@ -319,7 +319,7 @@ static int cmd_play_list(struct re_printf *pf, void *arg)
 	(void)arg;
 
 	err = odict_alloc(&od_resp, 1);
-	err |= odict_alloc(&od_array, MAX_SESSIONS);
+	err |= odict_alloc(&od_array, (uint32_t)session_count());
 	if (err)
 		goto out;
 

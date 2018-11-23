@@ -39,8 +39,6 @@
  *
  */
 
-const int MAX_SESSIONS = 100;
-
 struct session {
 	struct le le;
 	struct play *play;              /** Play instance for audio files */
@@ -193,6 +191,13 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 				debug("sync_b2bua: event: %d\n", ev);
 		}
 	}
+}
+
+
+/* Get the current number of sessions */
+size_t session_count()
+{
+	return list_count(&sessionl);
 }
 
 
