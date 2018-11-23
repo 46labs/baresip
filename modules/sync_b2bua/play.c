@@ -77,7 +77,7 @@ int play_alloc(struct auplay_st **stp, const struct auplay *ap,
 
 	if (!device_aumix_src(dev)) {
 		warning("aumix: device has no aumix source (%s)\n", device);
-		return ENOTSUP;
+		return ENOENT;
 	}
 
 	if (prm->fmt != AUFMT_S16LE) {
