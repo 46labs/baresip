@@ -103,7 +103,7 @@ int play_alloc(struct auplay_st **stp, const struct auplay *ap,
 	}
 
 	st->dev = dev;
-	device_start(dev);
+	device_enable(dev);
 
 	st->run = true;
 	err = pthread_create(&st->thread, NULL, write_thread, st);

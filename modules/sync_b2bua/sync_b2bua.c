@@ -698,7 +698,6 @@ int mixer_source_del(const char *id)
 int mixer_source_enable(const char *id, const char *sip_callid)
 {
 	struct mixer_source *src;
-	struct aumix_source *aumix_src;
 	struct session *sess;
 	int err = 0;
 
@@ -709,10 +708,6 @@ int mixer_source_enable(const char *id, const char *sip_callid)
 				id);
 		return EINVAL;
 	}
-
-	aumix_src = device_aumix_src(src->dev);
-	if (!aumix_src)
-		goto out;
 
 	if (sip_callid) {
 		/* Check that SIP call exist for the given SIP callid */
@@ -739,8 +734,7 @@ int mixer_source_enable(const char *id, const char *sip_callid)
 		}
 	}
 	else {
-		/* Explicitly enable the aumix source */
-		aumix_source_enable(aumix_src, true);
+		device_enable(src->dev);
 	}
 
  out:
