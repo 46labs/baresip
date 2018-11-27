@@ -35,7 +35,7 @@ static void *write_thread(void *arg)
 
 	while (st->run) {
 
-		(void)sys_msleep(20);
+		(void)sys_msleep(10);
 
 		if (!st->run)
 			break;
