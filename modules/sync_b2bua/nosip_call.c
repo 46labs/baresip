@@ -110,6 +110,8 @@ int nosip_call_alloc(struct nosip_call **callp, const char* id, bool offer)
 
 	memset(&stream_prm, 0, sizeof(stream_prm));
 	stream_prm.use_rtp = true;
+	stream_prm.af      = AF_INET;
+	stream_prm.cname   = id;
 
 	call = mem_zalloc(sizeof(*call), nosip_call_destructor);
 	if (!call)
