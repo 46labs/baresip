@@ -10,11 +10,13 @@
 #include "sync_b2bua.h"
 #include "aumix.h"
 
+
 /**
  * @defgroup sync_b2bua sync_b2bua
  *
  * Sync Back-to-Back User-Agent (B2BUA) module
  */
+
 
 /**
  *
@@ -39,6 +41,7 @@
  *
  */
 
+
 struct session {
 	struct le le;
 	struct play *play;              /** Play instance for audio files */
@@ -46,6 +49,7 @@ struct session {
 	struct nosip_call *nosip_call;  /** nosip call instance */
 	bool connected;
 };
+
 
 static struct list sessionl;
 static struct ua *sip_ua;
@@ -88,7 +92,7 @@ static struct session *get_session_by_sip_callid(const char* id)
 }
 
 
-static struct session *get_session_by_nosip_callid(const char* id)
+static struct session *get_session_by_nosip_callid(const char *id)
 {
 	struct le *le;
 
@@ -103,7 +107,7 @@ static struct session *get_session_by_nosip_callid(const char* id)
 }
 
 
-static struct mixer_source *get_mixer_source_by_id(const char* id)
+static struct mixer_source *get_mixer_source_by_id(const char *id)
 {
 	struct le *le;
 
@@ -151,8 +155,7 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 	(void)prm;
 	(void)arg;
 
-	if (ev == UA_EVENT_CALL_INCOMING)
-	{
+	if (ev == UA_EVENT_CALL_INCOMING) {
 		debug("sync_b2bua: CALL_INCOMING: peer=%s	-->	local=%s. id=%s\n",
 				call_peeruri(call), call_localuri(call), call_id(call));
 
@@ -821,13 +824,17 @@ static int module_init(void)
 	/* Register the mixer source and player */
 	err = ausrc_register(&ausrc, baresip_ausrcl(), "aumix", src_alloc);
 	err |= auplay_register(&auplay, baresip_auplayl(), "aumix", play_alloc);
-	if (err)
+	if (err) {
+		warning("ausrc\n");
 		return err;
+	}
 
 	/* Start audio mixer */
 	err = aumix_alloc(&mixer, srate, 1 /* channels */, 20 /* ptime */);
-	if (err)
+	if (err) {
+		warning("aumix\n");
 		return err;
+	}
 
 	debug("sync_b2bua: module loaded\n");
 
@@ -857,7 +864,7 @@ static int module_close(void)
 }
 
 
-const struct mod_export DECL_EXPORTS(b2bua) = {
+const struct mod_export DECL_EXPORTS(sync_b2bua) = {
 	"sync_b2bua",
 	"application",
 	module_init,

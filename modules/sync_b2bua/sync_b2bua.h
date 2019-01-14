@@ -5,6 +5,7 @@
 
 size_t session_count(void);
 
+
 /*
  * Mixer source
  */

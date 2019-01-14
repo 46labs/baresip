@@ -9,16 +9,18 @@
 #include <baresip.h>
 #include "aumix.h"
 
-static struct list devicel;
 
 struct device {
 	struct le le;
 	struct ausrc_st *ausrc;
 	struct auplay_st *auplay;
-	struct aumix* mixer;
-	struct aumix_source* aumix_src;
+	struct aumix *mixer;
+	struct aumix_source *aumix_src;
 	char *name;
 };
+
+
+static struct list devicel;
 
 
 static void device_destructor(void *arg)
@@ -93,12 +95,12 @@ int device_alloc(struct device **devp, struct aumix *mixer,
 	*devp = dev;
 
  out:
-	if (err) {
+	if (err)
 		mem_deref(dev);
-	}
 
-	return 0;
+	return err;
 }
+
 
 int device_enable(struct device *dev)
 {

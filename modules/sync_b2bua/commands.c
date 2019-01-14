@@ -61,6 +61,8 @@ static int cmd_nosip_call_create(struct re_printf *pf, void *arg)
 
 	err |= mbuf_strdup(mb, &desc, mb->end);
 	err |= odict_entry_add(od_resp, "desc", ODICT_STRING, desc);
+	if (err)
+		goto out;
 
 	err = json_encode_odict(pf, od_resp);
 	if (err) {
@@ -224,7 +226,7 @@ static int cmd_play_start(struct re_printf *pf, void *arg)
 	const char *param = carg->prm;
 	struct odict *od;
 	const char *sip_callid, *file;
-	bool loop;
+	bool loop = false;
 	int err;
 
 	(void)pf;
@@ -233,7 +235,7 @@ static int cmd_play_start(struct re_printf *pf, void *arg)
 	err = json_decode_odict(&od, 32, param, str_len(param), 16);
 	if (err) {
 		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err ;
+		return err;
 	}
 
 	sip_callid = odict_string(od, "sip_callid");
