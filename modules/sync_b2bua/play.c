@@ -15,8 +15,7 @@ static void play_destructor(void *arg)
 	struct auplay_st *st = arg;
 
 	/* Wait for termination of the thread */
-	if (st->run)
-	{
+	if (st->run) {
 		st->run = false;
 		(void)pthread_join(st->thread, NULL);
 	}

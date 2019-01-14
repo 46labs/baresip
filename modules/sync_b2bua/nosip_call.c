@@ -10,11 +10,13 @@
 #include "../src/core.h"
 #include "sync_b2bua.h"
 
+
 struct nosip_call {
 	char *id;                /**< nosip call id */
 	struct audio *audio;     /**< Audio stream */
 	struct sdp_session *sdp; /**< SDP Session  */
 };
+
 
 static void nosip_call_destructor(void *arg)
 {
@@ -27,12 +29,14 @@ static void nosip_call_destructor(void *arg)
 	mem_deref(call->sdp);
 }
 
+
 static int print_handler(const char *p, size_t size, void *arg)
 {
 	struct mbuf *mb = arg;
 
 	return mbuf_write_mem(mb, (uint8_t *)p, size);
 }
+
 
 int nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc,
 		   bool offer)
@@ -48,6 +52,7 @@ int nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc,
  out:
 	return err;
 }
+
 
 int nosip_call_sdp_debug(const struct nosip_call *call, bool offer)
 {
@@ -70,6 +75,7 @@ int nosip_call_sdp_debug(const struct nosip_call *call, bool offer)
 	return err;
 }
 
+
 int nosip_call_sdp_media_debug(const struct nosip_call *call)
 {
 	struct mbuf *mb = mbuf_alloc(2048);
@@ -88,6 +94,7 @@ int nosip_call_sdp_media_debug(const struct nosip_call *call)
 	return err;
 }
 
+
 /**
  * Allocate a new nosip Call state object
  *
@@ -97,7 +104,7 @@ int nosip_call_sdp_media_debug(const struct nosip_call *call)
  *
  * @return 0 if success, otherwise errorcode
  */
-int nosip_call_alloc(struct nosip_call **callp, const char* id, bool offer)
+int nosip_call_alloc(struct nosip_call **callp, const char *id, bool offer)
 {
 	const struct network *net = baresip_network();
 	const struct config *cfg = conf_config();
@@ -149,6 +156,7 @@ int nosip_call_alloc(struct nosip_call **callp, const char* id, bool offer)
 	return err;
 }
 
+
 /**
  * Get the audio object for the current call
  *
@@ -160,6 +168,7 @@ struct audio *nosip_call_audio(const struct nosip_call *call)
 {
 	return call ? call->audio : NULL;
 }
+
 
 const char *nosip_call_id(const struct nosip_call *call)
 {
@@ -188,6 +197,7 @@ int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
  out:
 	return err;
 }
+
 
 /**
  * Start audio object

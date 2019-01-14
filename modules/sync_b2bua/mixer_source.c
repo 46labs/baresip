@@ -10,6 +10,7 @@
 #include "sync_b2bua.h"
 #include "aumix.h"
 
+
 static void mixer_source_destructor(void *arg)
 {
 	struct mixer_source *src = arg;
@@ -19,6 +20,7 @@ static void mixer_source_destructor(void *arg)
 	mem_deref(src->nosip_call);
 	mem_deref(src->dev);
 }
+
 
 /**
  * Allocate a new mixer soure
@@ -33,7 +35,7 @@ static void mixer_source_destructor(void *arg)
  */
 int mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
 		   const char *device, struct nosip_call *nosip_call,
-		   struct audio* sip_call_audio)
+		   struct audio *sip_call_audio)
 {
 	struct mixer_source *src;
 	int err;
@@ -57,9 +59,8 @@ int mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
 	*srcp = src;
 
  out:
-	if (err) {
+	if (err)
 		mem_deref(src);
-	}
 
-	return 0;
+	return err;
 }
