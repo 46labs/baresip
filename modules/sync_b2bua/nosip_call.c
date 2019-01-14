@@ -1,5 +1,5 @@
 /**
- * @file nosip_call.c nosip call state
+ * @file sync_b2bua/nosip_call.c nosip call state
  *
  * Copyright (C) 2018 46labs
  */
@@ -161,7 +161,7 @@ int nosip_call_alloc(struct nosip_call **callp, const char *id, bool offer)
 /**
  * Get the audio object for the current call
  *
- * @param nosip_call  nosip Call object
+ * @param call  nosip Call object
  *
  * @return Audio object
  */
@@ -179,6 +179,12 @@ const char *nosip_call_id(const struct nosip_call *call)
 
 /**
  * Accept the call
+ *
+ * @param call   nosip Call object
+ * @param desc   mbuf pointing to the SDP
+ * @param offer  Flag indicating whether 'desc' is an offer
+ *
+ * @return 0 if success, otherwise errorcode
  */
 int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
 {
@@ -202,6 +208,9 @@ int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
 
 /**
  * Start audio object
+ *
+ * @param call   nosip Call object
+ *
  */
 void nosip_audio_start(const struct nosip_call *call)
 {

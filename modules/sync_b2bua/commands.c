@@ -1,5 +1,5 @@
 /**
- * @file commands.c
+ * @file sync_b2bua/commands.c
  *
  * Copyright (C) 2018 46labs
  */

@@ -1,5 +1,5 @@
 /**
- * @file src.c Audio mixer source
+ * @file sync_b2bua/src.c Audio mixer source
  *
  * Copyright (C) 2018 46labs
  */

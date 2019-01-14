@@ -1,10 +1,14 @@
+/**
+ * @file sync_b2bua/sync_b2bua.h Sync B2BUA
+ *
+ * Copyright (C) 2018 46labs
+ */
+
 #include <re.h>
 #include <rem.h>
 #include <baresip.h>
 
-
 size_t session_count(void);
-
 
 /*
  * Mixer source

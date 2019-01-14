@@ -1,5 +1,5 @@
 /**
- * @file sync_b2bua.c Back-to-Back User-Agent (B2BUA) module
+ * @file sync_b2bua/sync_b2bua.c Back-to-Back User-Agent (B2BUA) module
  *
  * Copyright (C) 2018 46labs
  */
@@ -352,8 +352,8 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 /**
  * Terminate a nosip call state object
  *
- * @param pf         Print handler for debug output
  * @param sip_callid ID of the SIP call to be connected to
+ * @param reason     Hangup reason
  *
  * @return 0 if success, otherwise errorcode
  */
@@ -526,7 +526,7 @@ int play_stop(const char *sip_callid)
 /**
  * Get a list of SIP callids that that are currently playing a file
  *
- * @param pf  Print handler for debug output
+ * @param od_array  odict instance
  *
  * @return 0 if success, otherwise errorcode
  */
@@ -554,7 +554,7 @@ int play_list(struct odict *od_array)
 /**
  * Get the RTP capabilities of the baresip instance
  *
- * @param pf  Print handler for debug output
+ * @param pf Print handler for debug output
  *
  * @return 0 if success, otherwise errorcode
  */

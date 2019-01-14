@@ -1,5 +1,5 @@
 /**
- * @file device.c. Audio mixer pseudo-device
+ * @file sync_b2bua/device.c Audio mixer pseudo-device
  *
  * Copyright (C) 2018 46labs
  */
@@ -56,10 +56,10 @@ static void aumix_frame_handler(const int16_t *sampv, size_t sampc, void *arg)
 /**
  * Allocate a device
  *
- * @param devp    Pointer to allocated device
- * @param aumix   Audio mixer
- * @param device  Device name
- * @param source  True if ausrc needs to be created
+ * @param devp        Pointer to allocated device
+ * @param mixer       Audio mixer
+ * @param name        Device name
+ * @param enable_src  True if ausrc needs to be created
  *
  * @return 0 if success, otherwise errorcode
  */
