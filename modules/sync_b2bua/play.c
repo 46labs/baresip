@@ -1,5 +1,5 @@
 /**
- * @file play.c Audio mixer playback
+ * @file sync_b2bua/play.c Audio mixer playback
  *
  * Copyright (C) 2018 46labs
  */

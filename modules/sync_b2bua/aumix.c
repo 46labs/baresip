@@ -1,5 +1,5 @@
 /**
- * @file aumix.c Audio mixer virtual driver
+ * @file sync_b2bua/aumix.c Audio mixer virtual driver
  *
  * Copyright (C) 2018 46labs
  */

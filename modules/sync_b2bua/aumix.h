@@ -1,5 +1,5 @@
 /**
- * @file aumix.h Audio mixer -- internal interface
+ * @file sync_b2bua/aumix.h Audio mixer -- internal interface
  *
  * Copyright (C) 2018 46labs
  */
