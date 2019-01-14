@@ -639,7 +639,7 @@ const struct cmd cmdv[] = {
 	{"mixer_source_del",       0, CMD_PRM, "Src delete",  cmd_mixer_source_del     },
 	{"mixer_source_enable",    0, CMD_PRM, "Src enable",  cmd_mixer_source_enable  },
 	{"mixer_source_disable",   0, CMD_PRM, "Src disable", cmd_mixer_source_disable },
-	{"mixer_play",             0, CMD_PRM, "Mixer play",   cmd_mixer_play          },
+	{"mixer_play",             0, CMD_PRM, "Mixer play",  cmd_mixer_play           },
 };
 
 const size_t command_count = ARRAY_SIZE(cmdv);
