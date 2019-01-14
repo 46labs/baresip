@@ -141,7 +141,8 @@ int nosip_call_alloc(struct nosip_call **callp, const char *id, bool offer)
 			NULL /* mnat */, NULL /* mnat_sess */,
 			NULL /* menc */, NULL /* menc_sess */,
 			20 /* ptime */, baresip_aucodecl(), offer,
-			NULL /* audio_event_h */, NULL /* audio_err_h */, call);
+			NULL /* audio_event_h */, NULL /* audio_err_h */,
+			call);
 	if (err) {
 		warning("nosip_call: audio_alloc failed (%m)\n", err);
 		goto out;
@@ -218,19 +219,27 @@ void nosip_audio_start(const struct nosip_call *call)
 		struct aucodec *ac = sc->data;
 
 		if (ac) {
-			err  = audio_encoder_set(call->audio, sc->data, sc->pt, sc->params);
+			err  = audio_encoder_set(call->audio, sc->data,
+						 sc->pt, sc->params);
 			if (err) {
-				warning("nosip_call: start: audio_encoder_set error: %m\n", err);
+				warning("nosip_call: start:"
+					" audio_encoder_set error: %m\n",
+					err);
 			}
-			err |= audio_decoder_set(call->audio, sc->data, sc->pt, sc->params);
+			err |= audio_decoder_set(call->audio, sc->data,
+						 sc->pt, sc->params);
 			if (err) {
-				warning("nosip_call: start: audio_decoder_set error: %m\n", err);
+				warning("nosip_call: start: audio_decoder_set"
+					" error: %m\n",
+					err);
 			}
 
 			if (!err) {
 				err = audio_start(call->audio);
 				if (err) {
-					warning("nosip_call: start: audio_start error: %m\n", err);
+					warning("nosip_call: start:"
+						" audio_start error: %m\n",
+						err);
 				}
 			}
 		}

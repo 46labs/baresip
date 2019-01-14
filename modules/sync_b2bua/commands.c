@@ -247,7 +247,8 @@ static int cmd_play_start(struct re_printf *pf, void *arg)
 
 	odict_get_boolean(od, &loop, "loop");
 
-	debug("sync_b2bua: play_start: sip_callid:'%s', file:'%s', loop:'%d'\n",
+	debug("sync_b2bua: play_start: sip_callid:'%s',"
+			" file:'%s', loop:'%d'\n",
 			sip_callid, file, loop);
 
 	err = play_start(sip_callid, file, loop);
@@ -630,19 +631,32 @@ static int cmd_mixer_play(struct re_printf *pf, void *arg)
 
 
 const struct cmd cmdv[] = {
-	{"sync_b2bua_status",      0,       0, "B2UA status", cmd_status               },
-	{"play_start",             0, CMD_PRM, "Play start",  cmd_play_start           },
-	{"play_stop",              0, CMD_PRM, "Play stop",   cmd_play_stop            },
-	{"play_list",              0,       0, "Play list",   cmd_play_list            },
-	{"sip_call_hangup",        0, CMD_PRM, "Call hangup", cmd_sip_call_hangup      },
-	{"nosip_call_create",      0, CMD_PRM, "Call create", cmd_nosip_call_create    },
-	{"nosip_call_connect",     0, CMD_PRM, "Call conn.",  cmd_nosip_call_connect   },
-	{"nosip_rtp_capabilities", 0,       0, "RTP capab.",  cmd_rtp_capabilities     },
-	{"mixer_source_add",       0, CMD_PRM, "Src add",     cmd_mixer_source_add     },
-	{"mixer_source_del",       0, CMD_PRM, "Src delete",  cmd_mixer_source_del     },
-	{"mixer_source_enable",    0, CMD_PRM, "Src enable",  cmd_mixer_source_enable  },
-	{"mixer_source_disable",   0, CMD_PRM, "Src disable", cmd_mixer_source_disable },
-	{"mixer_play",             0, CMD_PRM, "Mixer play",  cmd_mixer_play           },
+	{"sync_b2bua_status",
+		0,       0, "B2UA status",        cmd_status               },
+	{"play_start",
+		0, CMD_PRM, "Play start",         cmd_play_start           },
+	{"play_stop",
+		0, CMD_PRM, "Play stop",          cmd_play_stop            },
+	{"play_list",
+		0,       0, "Play list",          cmd_play_list            },
+	{"sip_call_hangup",
+		0, CMD_PRM, "Call hangup",        cmd_sip_call_hangup      },
+	{"nosip_call_create",
+		0, CMD_PRM, "Call create",        cmd_nosip_call_create    },
+	{"nosip_call_connect",
+		0, CMD_PRM, "Call connnnect",     cmd_nosip_call_connect   },
+	{"nosip_rtp_capabilities",
+		0,       0, "RTP capababilities", cmd_rtp_capabilities     },
+	{"mixer_source_add",
+		0, CMD_PRM, "Mixer source add",   cmd_mixer_source_add     },
+	{"mixer_source_del",
+		0, CMD_PRM, "Mixer source del.",  cmd_mixer_source_del     },
+	{"mixer_source_enable",
+		0, CMD_PRM, "Mixer source en.",   cmd_mixer_source_enable  },
+	{"mixer_source_disable",
+		0, CMD_PRM, "Mixser source dis.", cmd_mixer_source_disable },
+	{"mixer_play",
+		0, CMD_PRM, "Mixer play",         cmd_mixer_play           },
 };
 
 const size_t command_count = ARRAY_SIZE(cmdv);

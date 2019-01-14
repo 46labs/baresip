@@ -52,7 +52,8 @@ int mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
 	src->nosip_call = nosip_call;
 
 	/* Create aumix device */
-	err = device_alloc(&src->dev, aumix, device, sip_call_audio ? true : false);
+	err = device_alloc(&src->dev, aumix, device,
+			  sip_call_audio ? true : false);
 	if (err)
 		goto out;
 
