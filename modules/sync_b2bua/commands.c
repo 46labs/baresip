@@ -26,6 +26,7 @@ static int cmd_nosip_call_create(struct re_printf *pf, void *arg)
 	const char *id, *sip_callid;
 	struct odict *od_resp = NULL;
 	struct mbuf *mb = NULL;
+	char *desc = NULL;
 	int err;
 
 	/* Retrieve command params */
@@ -58,7 +59,8 @@ static int cmd_nosip_call_create(struct re_printf *pf, void *arg)
 	if (err)
 		goto out;
 
-	err |= odict_entry_add(od_resp, "desc", ODICT_STRING, "%b", mb->buf, mb->end);
+	err |= mbuf_strdup(mb, &desc, mb->end);
+	err |= odict_entry_add(od_resp, "desc", ODICT_STRING, desc);
 	if (err)
 		goto out;
 
@@ -72,6 +74,7 @@ static int cmd_nosip_call_create(struct re_printf *pf, void *arg)
 	mem_deref(od);
 	mem_deref(od_resp);
 	mem_deref(mb);
+	mem_deref(desc);
 
 	return err;
 }
