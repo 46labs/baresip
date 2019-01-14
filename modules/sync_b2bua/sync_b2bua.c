@@ -23,19 +23,21 @@
  \verbatim
 
  SIP Audio -> nosip Audio pipeline (aubridge audio driver):
-        .--------.   .----------.   .-------.
-        |        |   |          |   |       |
- RTP -->| auplay |-->| aubridge |-->| ausrc |---> RTP
-        |        |   |          |   |       |
-        '--------'   '----------'   '-------'
+
+ .       .--------.   .----------.   .-------.
+ |       |        |   |          |   |       |
+ | RTP -->| auplay |-->| aubridge |-->| ausrc |---> RTP
+ |       |        |   |          |   |       |
+ '       '--------'   '----------'   '-------'
 
 
  nosip Audio -> SIP Audio pipeline (aumix audio driver):
-        .--------.   .-------.   .-------.
-        |        |   |       |   |       |
- RTP -->| auplay |-->| aumix |-->| ausrc |---> RTP
-        |        |   |       |   |       |
-        '--------'   '-------'   '-------'
+
+ .       .--------.   .-------.   .-------.
+ |       |        |   |       |   |       |
+ | RTP -->| auplay |-->| aumix |-->| ausrc |---> RTP
+ |       |        |   |       |   |       |
+ '       '--------'   '-------'   '-------'
 
  \endverbatim
  *
@@ -99,7 +101,8 @@ static struct session *get_session_by_nosip_callid(const char *id)
 	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
 		struct session *sess = le->data;
 
-		if (sess->nosip_call && !strcmp(nosip_call_id(sess->nosip_call), id))
+		if (sess->nosip_call
+			  && !strcmp(nosip_call_id(sess->nosip_call), id))
 			return sess;
 	}
 
@@ -156,8 +159,11 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 	(void)arg;
 
 	if (ev == UA_EVENT_CALL_INCOMING) {
-		debug("sync_b2bua: CALL_INCOMING: peer=%s	-->	local=%s. id=%s\n",
-				call_peeruri(call), call_localuri(call), call_id(call));
+		debug("sync_b2bua: CALL_INCOMING:"
+			" peer=%s --> local=%s. id=%s\n",
+			call_peeruri(call),
+			call_localuri(call),
+			call_id(call));
 
 		err = new_session(call);
 		if (err) {
@@ -173,15 +179,17 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 
 		sess = get_session_by_sip_callid(call_id(call));
 		if (!sess) {
-			warning("sync_b2bua: no session found for the given callid: %s\n",
-					call_id(call));
+			warning("sync_b2bua: no session found for"
+				" the given callid: %s\n",
+				call_id(call));
 			return;
 		}
 
 		switch (ev) {
 			case UA_EVENT_CALL_ESTABLISHED:
-				debug("sync_b2bua: CALL_ESTABLISHED: peer_uri=%s\n",
-						call_peeruri(call));
+				debug("sync_b2bua: CALL_ESTABLISHED:"
+					" peer_uri=%s\n",
+					call_peeruri(call));
 				break;
 
 			case UA_EVENT_CALL_CLOSED:
@@ -222,7 +230,8 @@ int nosip_call_create(struct mbuf **mb, const char *id,
 	/* Check that no nosip call exists for the given id */
 	sess = get_session_by_nosip_callid(id);
 	if (sess) {
-		warning("sync_b2bua: session found for the given nosip callid: %s\n",
+		warning("sync_b2bua: session found for"
+			" the given nosip callid: %s\n",
 			id);
 		err = EINVAL;
 		goto out;
@@ -231,8 +240,9 @@ int nosip_call_create(struct mbuf **mb, const char *id,
 	/* Check that a SIP call exists for the given SIP callid */
 	sess = get_session_by_sip_callid(sip_callid);
 	if (!sess) {
-		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
-				sip_callid);
+		warning("sync_b2bua: no session found for"
+			" the given SIP callid: %s\n",
+			sip_callid);
 		err = EINVAL;
 		goto out;
 	}
@@ -277,8 +287,9 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 	/* Check that nosip call exist for the given id */
 	sess = get_session_by_nosip_callid(id);
 	if (!sess) {
-		warning("sync_b2bua: no session found for the given nosip call id: %s\n",
-				id);
+		warning("sync_b2bua: no session found for"
+			" the given nosip call id: %s\n",
+			id);
 		err = EINVAL;
 		goto out;
 	}
@@ -286,15 +297,16 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 	/* Check that SIP call exist for the given SIP callid */
 	sess = get_session_by_sip_callid(sip_callid);
 	if (!sess) {
-		warning("sync_b2bua: no session found for the given callid: %s\n",
-				sip_callid);
+		warning("sync_b2bua: no session found for"
+			" the given callid: %s\n",
+			sip_callid);
 		err = EINVAL;
 		goto out;
 	}
 
 	if (sess->connected) {
 		warning("sync_b2bua: nosip_call already connected: %s\n",
-				id);
+			id);
 		err = EINVAL;
 		goto out;
 
@@ -316,11 +328,14 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 	 * The audio coming from SIP call is the souce of nosip call:
 	 * (audio player SIP call -> audio source nosip call)
 	 */
-	re_snprintf(device, sizeof(device), "sip_to_nosip-%x", call_id(sess->sip_call));
+	(void)re_snprintf(device, sizeof(device),
+			  "sip_to_nosip-%x",
+			  call_id(sess->sip_call));
 
 	/* Set SIP call audio player to nosip call audio source */
 	err = audio_set_player(call_audio(sess->sip_call), "aubridge", device);
-	err |= audio_set_source(nosip_call_audio(sess->nosip_call), "aubridge", device);
+	err |= audio_set_source(nosip_call_audio(sess->nosip_call),
+				 "aubridge", device);
 	if (err) {
 		warning("sync_b2bua: audio_set_player failed (%m)\n", err);
 		goto out;
@@ -349,8 +364,9 @@ int sip_call_hangup(const char *sip_callid, const char *reason)
 	/* Check that SIP call exist for the given id */
 	sess = get_session_by_sip_callid(sip_callid);
 	if (!sess) {
-		warning("sync_b2bua: no session found for the given SIP call id: %s\n",
-				sip_callid);
+		warning("sync_b2bua: no session found for"
+			" the given SIP call id: %s\n",
+			sip_callid);
 		return EINVAL;
 	}
 
@@ -372,14 +388,17 @@ int status(struct re_printf *pf)
 	for (le = sessionl.head, i=1; le; le = le->next, i++) {
 		struct session *sess = le->data;
 
-		err |= re_hprintf(pf, "----------------- %d (%s)-----------------\n\n",
+		err |= re_hprintf(pf,
+				   "----------- %d (%s)-----------\n\n",
 				i, call_peeruri(sess->sip_call));
 		err |= re_hprintf(pf, "SIP call:\n\n");
 		err |= re_hprintf(pf, "%H\n", call_status, sess->sip_call);
-		err |= re_hprintf(pf, "%H\n", audio_debug, call_audio(sess->sip_call));
+		err |= re_hprintf(pf, "%H\n", audio_debug,
+				   call_audio(sess->sip_call));
 
 		err |= re_hprintf(pf, "nosip call:\n");
-		err |= re_hprintf(pf, "%H\n", audio_debug, nosip_call_audio(sess->nosip_call));
+		err |= re_hprintf(pf, "%H\n", audio_debug,
+				   nosip_call_audio(sess->nosip_call));
 
 		if (err)
 			goto out;
@@ -390,8 +409,10 @@ int status(struct re_printf *pf)
 	for (le = mixer_sourcel.head, i=1; le; le = le->next, i++) {
 		struct mixer_source *src = le->data;
 
-		err |= re_hprintf(pf, "----------------- %d -----------------\n", i);
-		err |= re_hprintf(pf, "%H\n", audio_debug, nosip_call_audio(src->nosip_call));
+		err |= re_hprintf(pf,
+				   "----------- %d -----------\n", i);
+		err |= re_hprintf(pf, "%H\n", audio_debug,
+				   nosip_call_audio(src->nosip_call));
 
 		if (err)
 			goto out;
@@ -423,8 +444,9 @@ int play_start(const char *sip_callid, const char *file, bool loop)
 	/* Check that a SIP call exists for the given SIP callid */
 	sess = get_session_by_sip_callid(sip_callid);
 	if (!sess) {
-		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
-				sip_callid);
+		warning("sync_b2bua: no session found for"
+			" the given SIP callid: %s\n",
+			sip_callid);
 		err = EINVAL;
 		goto out;
 	}
@@ -442,7 +464,8 @@ int play_start(const char *sip_callid, const char *file, bool loop)
 	 * see 'src/play.c'
 	 */
 
-	re_snprintf(device, sizeof(cfg->audio.alert_dev), "play_%x", sess);
+	(void)re_snprintf(device, sizeof(cfg->audio.alert_dev),
+			  "play_%x", sess);
 
 	/* Update the audo alert module and device in the config */
 	str_ncpy(cfg->audio.alert_mod, module, sizeof(module));
@@ -488,8 +511,9 @@ int play_stop(const char *sip_callid)
 	/* Check that a SIP call exists for the given SIP callid */
 	sess = get_session_by_sip_callid(sip_callid);
 	if (!sess) {
-		warning("sync_b2bua: no session found for the given SIP callid: %s\n",
-				sip_callid);
+		warning("sync_b2bua: no session found for"
+			" the given SIP callid: %s\n",
+			sip_callid);
 		return EINVAL;
 	}
 
@@ -517,7 +541,8 @@ int play_list(struct odict *od_array)
 		if (!sess->play)
 			continue;
 
-		err = odict_entry_add(od_array, "", ODICT_STRING, call_id(sess->sip_call));
+		err = odict_entry_add(od_array, "",
+				  ODICT_STRING, call_id(sess->sip_call));
 		if (err)
 			return err;
 	}
@@ -581,8 +606,9 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 
 	/* Check that a mixer source does not exist for the given id */
 	if (get_mixer_source_by_id(id)) {
-		warning("sync_b2bua: mixer source found for the given id: %s\n",
-				id);
+		warning("sync_b2bua: mixer source found for"
+			" the given id: %s\n",
+			id);
 		return EINVAL;
 	}
 	/* Create a nosip call */
@@ -612,7 +638,8 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 		err = mixer_source_alloc(&mixer_source, mixer, id,
 				nosip_call, NULL);
 		if (err) {
-			warning("sync_b2bua: mixer_source_alloc failed (%m)\n", err);
+			warning("sync_b2bua: mixer_source_alloc failed (%m)\n",
+				err);
 			goto out;
 		}
 	}
@@ -621,8 +648,9 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 		/* Check that SIP call exist for the given SIP callid */
 		sess = get_session_by_sip_callid(sip_callid);
 		if (!sess) {
-			warning("sync_b2bua: no session found for the given SIP callid: %s\n",
-					sip_callid);
+			warning("sync_b2bua: no session found for"
+				" the given SIP callid: %s\n",
+				sip_callid);
 			err = EINVAL;
 			goto out;
 		}
@@ -630,7 +658,8 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 		err = mixer_source_alloc(&mixer_source, mixer, id,
 				nosip_call, call_audio(sess->sip_call));
 		if (err) {
-			warning("sync_b2bua: mixer_source_alloc failed (%m)\n", err);
+			warning("sync_b2bua: mixer_source_alloc failed (%m)\n",
+					err);
 			goto out;
 		}
 
@@ -638,9 +667,11 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 		audio_set_devicename(call_audio(sess->sip_call), id, "");
 
 		/* Set audio source to the just allocated one */
-		err = audio_set_source(call_audio(sess->sip_call), "aumix", id);
+		err = audio_set_source(call_audio(sess->sip_call),
+				  "aumix", id);
 		if (err) {
-			warning("mixer_source: audio_set_source failed (%m)\n", err);
+			warning("mixer_source: audio_set_source failed (%m)\n",
+					err);
 			goto out;
 		}
 	}
@@ -679,7 +710,8 @@ int mixer_source_del(const char *id)
 	/* Check that a mixer source exists for the given id */
 	src = get_mixer_source_by_id(id);
 	if (!src) {
-		warning("sync_b2bua: no mixer source found for the given id: %s\n",
+		warning("sync_b2bua: no mixer source found for"
+				" the given id: %s\n",
 				id);
 		return EINVAL;
 	}
@@ -707,7 +739,8 @@ int mixer_source_enable(const char *id, const char *sip_callid)
 	/* Check that a mixer source exists for the given id */
 	src = get_mixer_source_by_id(id);
 	if (!src) {
-		warning("sync_b2bua: no mixer source found for the given id: %s\n",
+		warning("sync_b2bua: no mixer source found for"
+				" the given id: %s\n",
 				id);
 		return EINVAL;
 	}
@@ -716,7 +749,8 @@ int mixer_source_enable(const char *id, const char *sip_callid)
 		/* Check that SIP call exist for the given SIP callid */
 		sess = get_session_by_sip_callid(sip_callid);
 		if (!sess) {
-			warning("sync_b2bua: no session found for the given SIP callid: %s\n",
+			warning("sync_b2bua: no session found for"
+					" the given SIP callid: %s\n",
 					sip_callid);
 			err = EINVAL;
 			goto out;
@@ -727,12 +761,14 @@ int mixer_source_enable(const char *id, const char *sip_callid)
 
 		/*
 		 * Set audio source accordingly
-		 * By setting the corresponding aumix audio source, the aumix_source
-		 * will be enabled.
+		 * By setting the corresponding aumix audio source,
+		 * the aumix_source will be enabled.
 		 */
-		err = audio_set_source(call_audio(sess->sip_call), "aumix", id);
+		err = audio_set_source(call_audio(sess->sip_call),
+				  "aumix", id);
 		if (err) {
-			warning("mixer_source: audio_set_source failed (%m)\n", err);
+			warning("mixer_source: audio_set_source failed (%m)\n",
+					err);
 			goto out;
 		}
 	}
@@ -759,7 +795,8 @@ int mixer_source_disable(const char *id)
 	/* Check that a mixer source exists for the given id */
 	src = get_mixer_source_by_id(id);
 	if (!src) {
-		warning("sync_b2bua: no mixer source found for the given id: %s\n",
+		warning("sync_b2bua: no mixer source found for"
+				" the given id: %s\n",
 				id);
 		return EINVAL;
 	}
@@ -787,7 +824,8 @@ int mixer_play(const char *file)
 	char filepath[256];
 	int err;
 
-	re_snprintf(filepath, sizeof(filepath), "%s/%s", cfg->audio.audio_path, file);
+	(void)re_snprintf(filepath, sizeof(filepath), "%s/%s",
+			  cfg->audio.audio_path, file);
 
 	err = aumix_playfile(mixer, filepath);
 	if (err)
@@ -823,7 +861,8 @@ static int module_init(void)
 
 	/* Register the mixer source and player */
 	err = ausrc_register(&ausrc, baresip_ausrcl(), "aumix", src_alloc);
-	err |= auplay_register(&auplay, baresip_auplayl(), "aumix", play_alloc);
+	err |= auplay_register(&auplay, baresip_auplayl(),
+			  "aumix", play_alloc);
 	if (err) {
 		warning("ausrc\n");
 		return err;
@@ -852,7 +891,8 @@ static int module_close(void)
 	info("sync_b2bua: flushing %u sessions\n", list_count(&sessionl));
 	list_flush(&sessionl);
 
-	info("sync_b2bua: flushing %u mixer sources\n", list_count(&mixer_sourcel));
+	info("sync_b2bua: flushing %u mixer sources\n",
+			list_count(&mixer_sourcel));
 	list_flush(&mixer_sourcel);
 
 	mem_deref(mixer);
