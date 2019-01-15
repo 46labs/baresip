@@ -46,6 +46,8 @@
 
 struct session {
 	struct le le;
+	struct le leh_sip;
+	struct le leh_nosip;
 	struct play *play;              /** Play instance for audio files */
 	struct call *sip_call;          /** SIP call instance */
 	struct nosip_call *nosip_call;  /** nosip call instance */
@@ -55,6 +57,11 @@ struct session {
 
 static struct list sessionl;
 static struct ua *sip_ua;
+
+/* Hash table indexing sessions by SIP callid */
+static struct hash *ht_session_by_sip_callid;
+/* Hash table indexing sessions by nosip callid */
+static struct hash *ht_session_by_nosip_callid;
 
 static struct ausrc *ausrc;
 static struct auplay *auplay;
@@ -74,6 +81,8 @@ static void session_destructor(void *arg)
 	      sess->sip_call, sess->nosip_call);
 
 	list_unlink(&sess->le);
+	hash_unlink(&sess->leh_sip);
+	hash_unlink(&sess->leh_nosip);
 
 	mem_deref(sess->play);
 	mem_deref(sess->sip_call);
@@ -81,34 +90,33 @@ static void session_destructor(void *arg)
 }
 
 
+static bool list_apply_session_by_sip_callid_handler(struct le *le, void *arg)
+{
+	struct session *st = le->data;
+
+	return (st->sip_call && !strcmp(call_id(st->sip_call), arg));
+}
+
+
 static struct session *get_session_by_sip_callid(const char* id)
 {
-	struct le *le;
+	return list_ledata(hash_lookup(ht_session_by_sip_callid, hash_joaat_str(id),
+				       list_apply_session_by_sip_callid_handler, (void *)id));
+}
 
-	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
-		struct session *sess = le->data;
 
-		if (sess->sip_call && !strcmp(call_id(sess->sip_call), id))
-			return sess;
-	}
+static bool list_apply_session_by_nosip_callid_handler(struct le *le, void *arg)
+{
+	struct session *st = le->data;
 
-	return NULL;
+	return (st->nosip_call && !strcmp(sync_nosip_call_id(st->nosip_call), arg));
 }
 
 
 static struct session *get_session_by_nosip_callid(const char *id)
 {
-	struct le *le;
-
-	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
-		struct session *sess = le->data;
-
-		if (sess->nosip_call
-			  && !strcmp(sync_nosip_call_id(sess->nosip_call), id))
-			return sess;
-	}
-
-	return NULL;
+	return list_ledata(hash_lookup(ht_session_by_nosip_callid, hash_joaat_str(id),
+				       list_apply_session_by_nosip_callid_handler, (void *)id));
 }
 
 
@@ -150,6 +158,9 @@ static int new_session(struct call *call)
 		warning("sync_b2bua: ua_answer failed (%m)\n", err);
 
 	list_append(&sessionl, &sess->le, sess);
+
+	/* Index the session by SIP callid */
+	hash_append(ht_session_by_sip_callid, hash_joaat_str(call_id(call)), &sess->leh_sip, sess);
 
 	return err;
 }
@@ -258,6 +269,9 @@ int sync_nosip_call_create(struct mbuf **mb, const char *id,
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		goto out;
 	}
+
+	/* Index the session by nosip callid */
+	hash_append(ht_session_by_nosip_callid, hash_joaat_str(id), &sess->leh_nosip, sess);
 
 	err |= sync_nosip_call_sdp_get(sess->nosip_call, mb, true /* offer */);
 	if (err) {
@@ -853,8 +867,17 @@ static int module_init(void)
 		return ENOENT;
 	}
 
-	/* Allocate device hash table (limited to 100 buckets) */
+	/* Allocate device hash table */
 	err = hash_alloc(&sync_ht_device, 256);
+	if (err)
+		return err;
+
+	/*
+	 * Allocate session hash table
+	 * (sessions indexed by SIP callid and nosip callid)
+	 */
+	err = hash_alloc(&ht_session_by_sip_callid, 256);
+	err |= hash_alloc(&ht_session_by_nosip_callid, 256);
 	if (err)
 		return err;
 
@@ -899,6 +922,12 @@ static int module_close(void)
 	mem_deref(ausrc);
 
 	sync_ht_device = mem_deref(sync_ht_device);
+
+	hash_clear(ht_session_by_sip_callid);
+	ht_session_by_sip_callid = mem_deref(ht_session_by_sip_callid);
+
+	hash_clear(ht_session_by_nosip_callid);
+	ht_session_by_nosip_callid = mem_deref(ht_session_by_nosip_callid);
 
 	info("sync_b2bua: flushing %u sessions\n", list_count(&sessionl));
 	list_flush(&sessionl);
