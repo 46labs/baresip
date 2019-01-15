@@ -26,6 +26,11 @@ int sync_mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
 
 
 /*
+ * Device
+ */
+extern struct hash *sync_ht_device;
+
+/*
  * nosip_call
  */
 
