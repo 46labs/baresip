@@ -879,7 +879,7 @@ int sync_mixer_play(const char *file)
 static int module_init(void)
 {
 	struct config *cfg = conf_config();
-	uint32_t srate = cfg->audio.srate_play;
+	uint32_t srate = cfg->audio.srate_play | 48000;
 	int err;
 
 	sip_ua = uag_find_param("b2bua", "inbound");
