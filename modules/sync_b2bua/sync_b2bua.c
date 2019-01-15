@@ -104,25 +104,31 @@ static bool list_apply_session_by_sip_callid_handler(struct le *le, void *arg)
 
 static struct session *get_session_by_sip_callid(const char* id)
 {
-	return list_ledata(hash_lookup(ht_session_by_sip_callid, hash_joaat_str(id),
-				       list_apply_session_by_sip_callid_handler, (void *)id));
+	return list_ledata(hash_lookup(ht_session_by_sip_callid,
+				    hash_joaat_str(id),
+				    list_apply_session_by_sip_callid_handler,
+				    (void *)id));
 }
 
 
 /* ht_session_by_nosip_callid lookup helpers */
 
-static bool list_apply_session_by_nosip_callid_handler(struct le *le, void *arg)
+static bool list_apply_session_by_nosip_callid_handler(
+		struct le *le, void *arg)
 {
 	struct session *st = le->data;
 
-	return (st->nosip_call && !strcmp(sync_nosip_call_id(st->nosip_call), arg));
+	return (st->nosip_call
+			&& !strcmp(sync_nosip_call_id(st->nosip_call), arg));
 }
 
 
 static struct session *get_session_by_nosip_callid(const char *id)
 {
-	return list_ledata(hash_lookup(ht_session_by_nosip_callid, hash_joaat_str(id),
-				       list_apply_session_by_nosip_callid_handler, (void *)id));
+	return list_ledata(hash_lookup(ht_session_by_nosip_callid,
+				    hash_joaat_str(id),
+				    list_apply_session_by_nosip_callid_handler,
+				    (void *)id));
 }
 
 
@@ -132,14 +138,16 @@ static bool list_apply_mixer_source_handler(struct le *le, void *arg)
 {
 	struct mixer_source *st = le->data;
 
-	return (st->nosip_call && !strcmp(sync_nosip_call_id(st->nosip_call), arg));
+	return (st->nosip_call
+			&& !strcmp(sync_nosip_call_id(st->nosip_call), arg));
 }
 
 
 static struct mixer_source *get_mixer_source_by_id(const char* id)
 {
 	return list_ledata(hash_lookup(ht_mixer_source, hash_joaat_str(id),
-				       list_apply_mixer_source_handler, (void *)id));
+				    list_apply_mixer_source_handler,
+				    (void *)id));
 }
 
 
@@ -164,7 +172,8 @@ static int new_session(struct call *call)
 	list_append(&sessionl, &sess->le, sess);
 
 	/* Index the session by SIP callid */
-	hash_append(ht_session_by_sip_callid, hash_joaat_str(call_id(call)), &sess->leh_sip, sess);
+	hash_append(ht_session_by_sip_callid, hash_joaat_str(call_id(call)),
+			        &sess->leh_sip, sess);
 
 	return err;
 }
@@ -275,7 +284,8 @@ int sync_nosip_call_create(struct mbuf **mb, const char *id,
 	}
 
 	/* Index the session by nosip callid */
-	hash_append(ht_session_by_nosip_callid, hash_joaat_str(id), &sess->leh_nosip, sess);
+	hash_append(ht_session_by_nosip_callid, hash_joaat_str(id),
+			        &sess->leh_nosip, sess);
 
 	err |= sync_nosip_call_sdp_get(sess->nosip_call, mb, true /* offer */);
 	if (err) {
@@ -702,7 +712,8 @@ int sync_mixer_source_add(struct mbuf **answer, const char *id,
 	list_append(&mixer_sourcel, &mixer_source->le, mixer_source);
 
 	/* Index the mixer source by id */
-	hash_append(ht_mixer_source, hash_joaat_str(id), &mixer_source->leh, mixer_source);
+	hash_append(ht_mixer_source, hash_joaat_str(id),
+			        &mixer_source->leh, mixer_source);
 
 	/* Set the audio play device name */
 	audio_set_devicename(sync_nosip_call_audio(nosip_call), "", id);
