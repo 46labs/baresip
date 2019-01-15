@@ -23,7 +23,7 @@ struct mixer_source {
 
 int sync_mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
 		   const char *device, struct nosip_call *nosip_call,
-		   struct audio* sip_call_audio);
+		   bool sip_call_related);
 
 
 /*

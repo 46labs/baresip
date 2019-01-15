@@ -673,7 +673,7 @@ int sync_mixer_source_add(struct mbuf **answer, const char *id,
 	if (!sip_callid)
 	{
 		err = sync_mixer_source_alloc(&mixer_source, mixer, id,
-				nosip_call, NULL);
+				nosip_call, false);
 		if (err) {
 			warning("sync_b2bua: mixer_source_alloc failed (%m)\n",
 				err);
@@ -693,7 +693,7 @@ int sync_mixer_source_add(struct mbuf **answer, const char *id,
 		}
 
 		err = sync_mixer_source_alloc(&mixer_source, mixer, id,
-				nosip_call, call_audio(sess->sip_call));
+				nosip_call, true);
 		if (err) {
 			warning("sync_b2bua: mixer_source_alloc failed (%m)\n",
 					err);
