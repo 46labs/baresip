@@ -63,7 +63,7 @@ static void aumix_frame_handler(const int16_t *sampv, size_t sampc, void *arg)
  *
  * @return 0 if success, otherwise errorcode
  */
-int device_alloc(struct device **devp, struct aumix *mixer,
+int sync_device_alloc(struct device **devp, struct aumix *mixer,
 		   const char *name, bool enable_src)
 {
 	struct device *dev;
@@ -102,7 +102,7 @@ int device_alloc(struct device **devp, struct aumix *mixer,
 }
 
 
-int device_enable(struct device *dev)
+int sync_device_enable(struct device *dev)
 {
 	if (!dev)
 		return ENOENT;
@@ -113,7 +113,7 @@ int device_enable(struct device *dev)
 }
 
 
-int device_disable(struct device *dev)
+int sync_device_disable(struct device *dev)
 {
 	if (!dev)
 		return ENOENT;
@@ -124,7 +124,7 @@ int device_disable(struct device *dev)
 }
 
 
-struct device *device_find(const char *name)
+struct device *sync_device_find(const char *name)
 {
 	struct le *le;
 
@@ -139,7 +139,7 @@ struct device *device_find(const char *name)
 }
 
 
-void device_set_ausrc(struct device *dev, struct ausrc_st *ausrc)
+void sync_device_set_ausrc(struct device *dev, struct ausrc_st *ausrc)
 {
 	if (!dev)
 		return;
@@ -148,16 +148,16 @@ void device_set_ausrc(struct device *dev, struct ausrc_st *ausrc)
 	 * Disable the device to avoid 'aumix_frame_handler'
 	 * from being executed
 	 */
-	device_disable(dev);
+	sync_device_disable(dev);
 
 	dev->ausrc = ausrc;
 
 	if (ausrc)
-		device_enable(dev);
+		sync_device_enable(dev);
 }
 
 
-struct aumix_source *device_aumix_src(struct device *dev)
+struct aumix_source *sync_device_aumix_src(struct device *dev)
 {
 	if (!dev)
 		return NULL;

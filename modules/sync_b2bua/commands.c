@@ -48,7 +48,7 @@ static int cmd_nosip_call_create(struct re_printf *pf, void *arg)
 			id, sip_callid);
 
 	/* Create nosip call */
-	err = nosip_call_create(&mb, id, sip_callid);
+	err = sync_nosip_call_create(&mb, id, sip_callid);
 	if (err) {
 		warning("sync_b2bua: nosip_call_create failed (%m)\n", err);
 		goto out;
@@ -134,7 +134,7 @@ static int cmd_nosip_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 
 	/* Connect the nosip_call() */
-	err = nosip_call_connect(id, sip_callid, mb);
+	err = sync_nosip_call_connect(id, sip_callid, mb);
 	if (err)
 		goto out;
 
@@ -185,7 +185,7 @@ static int cmd_sip_call_hangup(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: sip_call_hangup: id='%s', reason='%s'\n",
 	      sip_callid, reason);
 
-	err = sip_call_hangup(sip_callid, reason);
+	err = sync_sip_call_hangup(sip_callid, reason);
 	if (err)
 		goto out;
 
@@ -202,7 +202,7 @@ static int cmd_status(struct re_printf *pf, void *arg)
 
 	(void)arg;
 
-	err = status(pf);
+	err = sync_status(pf);
 
 	return err;
 }
@@ -251,7 +251,7 @@ static int cmd_play_start(struct re_printf *pf, void *arg)
 			" file:'%s', loop:'%d'\n",
 			sip_callid, file, loop);
 
-	err = play_start(sip_callid, file, loop);
+	err = sync_play_start(sip_callid, file, loop);
 
  out:
 	mem_deref(od);
@@ -296,7 +296,7 @@ static int cmd_play_stop(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: play_stop: sip_callid:'%s'\n",
 			sip_callid);
 
-	err = play_stop(sip_callid);
+	err = sync_play_stop(sip_callid);
 
  out:
 	mem_deref(od);
@@ -322,7 +322,7 @@ static int cmd_play_list(struct re_printf *pf, void *arg)
 	(void)arg;
 
 	err = odict_alloc(&od_resp, 1);
-	err |= odict_alloc(&od_array, (uint32_t)session_count());
+	err |= odict_alloc(&od_array, (uint32_t)sync_session_count());
 	if (err)
 		goto out;
 
@@ -332,7 +332,7 @@ static int cmd_play_list(struct re_printf *pf, void *arg)
 
 	debug("sync_b2bua: play_list\n");
 
-	err = play_list(od_array);
+	err = sync_play_list(od_array);
 	if (err) {
 		warning("sync_b2bua: play_list failed (%m)\n", err);
 		goto out;
@@ -366,7 +366,7 @@ static int cmd_rtp_capabilities(struct re_printf *pf, void *arg)
 
 	(void)arg;
 
-	err = rtp_capabilities(pf);
+	err = sync_rtp_capabilities(pf);
 
 	return err;
 }
@@ -424,7 +424,7 @@ static int cmd_mixer_source_add(struct re_printf *pf, void *arg)
 	if (err)
 		goto out;
 
-	err = mixer_source_add(&answer, id, sip_callid, offer);
+	err = sync_mixer_source_add(&answer, id, sip_callid, offer);
 	if (err) {
 		warning("sync_b2bua: mixer_source_add failed (%m)\n", err);
 		goto out;
@@ -483,7 +483,7 @@ static int cmd_mixer_source_del(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: mixer_source_del:  id='%s'\n",
 	      id);
 
-	err = mixer_source_del(id);
+	err = sync_mixer_source_del(id);
 
  out:
 	mem_deref(od);
@@ -532,7 +532,7 @@ static int cmd_mixer_source_enable(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: mixer_source_enable:  id='%s', sip_callid:'%s'\n",
 	      id, sip_callid);
 
-	err = mixer_source_enable(id, sip_callid);
+	err = sync_mixer_source_enable(id, sip_callid);
 	if (err) {
 		warning("sync_b2bua: mixer_source_enable failed (%m)\n", err);
 		goto out;
@@ -582,7 +582,7 @@ static int cmd_mixer_source_disable(struct re_printf *pf, void *arg)
 	debug("sync_b2bua: mixer_source_disable:  id='%s'\n",
 	      id);
 
-	err = mixer_source_disable(id);
+	err = sync_mixer_source_disable(id);
 
  out:
 	mem_deref(od);
@@ -621,7 +621,7 @@ static int cmd_mixer_play(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	err = mixer_play(file);
+	err = sync_mixer_play(file);
 
  out:
 	mem_deref(od);

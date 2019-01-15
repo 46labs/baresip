@@ -102,7 +102,7 @@ static struct session *get_session_by_nosip_callid(const char *id)
 		struct session *sess = le->data;
 
 		if (sess->nosip_call
-			  && !strcmp(nosip_call_id(sess->nosip_call), id))
+			  && !strcmp(sync_nosip_call_id(sess->nosip_call), id))
 			return sess;
 	}
 
@@ -121,7 +121,7 @@ static struct mixer_source *get_mixer_source_by_id(const char *id)
 		if (!src->nosip_call)
 			continue;
 
-		if (!strcmp(nosip_call_id(src->nosip_call), id))
+		if (!strcmp(sync_nosip_call_id(src->nosip_call), id))
 			return src;
 	}
 
@@ -206,7 +206,7 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 
 
 /* Get the current number of sessions */
-size_t session_count()
+size_t sync_session_count()
 {
 	return list_count(&sessionl);
 }
@@ -221,7 +221,7 @@ size_t session_count()
  *
  * @return 0 if success, otherwise errorcode
  */
-int nosip_call_create(struct mbuf **mb, const char *id,
+int sync_nosip_call_create(struct mbuf **mb, const char *id,
 		   const char *sip_callid)
 {
 	struct session *sess;
@@ -248,13 +248,13 @@ int nosip_call_create(struct mbuf **mb, const char *id,
 	}
 
 	/* Create nosip call */
-	err = nosip_call_alloc(&sess->nosip_call, id, true /* offer */);
+	err = sync_nosip_call_alloc(&sess->nosip_call, id, true /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		goto out;
 	}
 
-	err |= nosip_call_sdp_get(sess->nosip_call, mb, true /* offer */);
+	err |= sync_nosip_call_sdp_get(sess->nosip_call, mb, true /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_sdp_get failed (%m)\n", err);
 		goto out;
@@ -277,7 +277,7 @@ int nosip_call_create(struct mbuf **mb, const char *id,
  *
  * @return 0 if success, otherwise errorcode
  */
-int nosip_call_connect(const char *id, const char *sip_callid,
+int sync_nosip_call_connect(const char *id, const char *sip_callid,
 		   struct mbuf *mb)
 {
 	struct session *sess;
@@ -316,7 +316,7 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 	sess->play = mem_deref(sess->play);
 
 	/* Accept the call with the remote SDP */
-	err = nosip_call_accept(sess->nosip_call, mb, false);
+	err = sync_nosip_call_accept(sess->nosip_call, mb, false);
 	if (err) {
 		warning("sync_b2bua: nosip_call_accept failed (%m)\n", err);
 		goto out;
@@ -334,7 +334,7 @@ int nosip_call_connect(const char *id, const char *sip_callid,
 
 	/* Set SIP call audio player to nosip call audio source */
 	err = audio_set_player(call_audio(sess->sip_call), "aubridge", device);
-	err |= audio_set_source(nosip_call_audio(sess->nosip_call),
+	err |= audio_set_source(sync_nosip_call_audio(sess->nosip_call),
 				 "aubridge", device);
 	if (err) {
 		warning("sync_b2bua: audio_set_player failed (%m)\n", err);
@@ -357,7 +357,7 @@ int nosip_call_connect(const char *id, const char *sip_callid,
  *
  * @return 0 if success, otherwise errorcode
  */
-int sip_call_hangup(const char *sip_callid, const char *reason)
+int sync_sip_call_hangup(const char *sip_callid, const char *reason)
 {
 	struct session *sess;
 
@@ -377,7 +377,7 @@ int sip_call_hangup(const char *sip_callid, const char *reason)
 }
 
 
-int status(struct re_printf *pf)
+int sync_status(struct re_printf *pf)
 {
 	struct le *le;
 	int i;
@@ -398,7 +398,7 @@ int status(struct re_printf *pf)
 
 		err |= re_hprintf(pf, "nosip call:\n");
 		err |= re_hprintf(pf, "%H\n", audio_debug,
-				   nosip_call_audio(sess->nosip_call));
+				   sync_nosip_call_audio(sess->nosip_call));
 
 		if (err)
 			goto out;
@@ -412,7 +412,7 @@ int status(struct re_printf *pf)
 		err |= re_hprintf(pf,
 				   "----------- %d -----------\n", i);
 		err |= re_hprintf(pf, "%H\n", audio_debug,
-				   nosip_call_audio(src->nosip_call));
+				   sync_nosip_call_audio(src->nosip_call));
 
 		if (err)
 			goto out;
@@ -432,7 +432,7 @@ int status(struct re_printf *pf)
  *
  * @return 0 if success, otherwise errorcode
  */
-int play_start(const char *sip_callid, const char *file, bool loop)
+int sync_play_start(const char *sip_callid, const char *file, bool loop)
 {
 	static const char module[9] = "aubridge";
 
@@ -504,7 +504,7 @@ int play_start(const char *sip_callid, const char *file, bool loop)
  *
  * @return 0 if success, otherwise errorcode
  */
-int play_stop(const char *sip_callid)
+int sync_play_stop(const char *sip_callid)
 {
 	struct session *sess;
 
@@ -530,7 +530,7 @@ int play_stop(const char *sip_callid)
  *
  * @return 0 if success, otherwise errorcode
  */
-int play_list(struct odict *od_array)
+int sync_play_list(struct odict *od_array)
 {
 	struct le *le;
 	int err;
@@ -558,19 +558,19 @@ int play_list(struct odict *od_array)
  *
  * @return 0 if success, otherwise errorcode
  */
-int rtp_capabilities(struct re_printf *pf)
+int sync_rtp_capabilities(struct re_printf *pf)
 {
 	struct nosip_call *call;
 	struct mbuf *mb;
 	int err;
 
-	err = nosip_call_alloc(&call, "capabilities", true /* offer */);
+	err = sync_nosip_call_alloc(&call, "capabilities", true /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		return err;
 	}
 
-	err = nosip_call_sdp_get(call, &mb, true /* offer */);
+	err = sync_nosip_call_sdp_get(call, &mb, true /* offer */);
 	if (err) {
 		warning("sync_b2bua: failed to get SDP (%m)\n", err);
 		goto out;
@@ -596,7 +596,7 @@ int rtp_capabilities(struct re_printf *pf)
  *
  * @return 0 if success, otherwise errorcode
  */
-int mixer_source_add(struct mbuf **answer, const char *id,
+int sync_mixer_source_add(struct mbuf **answer, const char *id,
 		   const char *sip_callid, struct mbuf *offer)
 {
 	struct session *sess = NULL;
@@ -612,21 +612,21 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 		return EINVAL;
 	}
 	/* Create a nosip call */
-	err = nosip_call_alloc(&nosip_call, id, false /* offer */);
+	err = sync_nosip_call_alloc(&nosip_call, id, false /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_alloc failed (%m)\n", err);
 		goto out;
 	}
 
 	/* Accept the call with the remote SDP */
-	err = nosip_call_accept(nosip_call, offer, true /* offer */);
+	err = sync_nosip_call_accept(nosip_call, offer, true /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_accept failed (%m)\n", err);
 		goto out;
 	}
 
 	/* Retrieve SDP answer */
-	err = nosip_call_sdp_get(nosip_call, answer, false /* offer */);
+	err = sync_nosip_call_sdp_get(nosip_call, answer, false /* offer */);
 	if (err) {
 		warning("sync_b2bua: nosip_call_sdp_get failed (%m)\n", err);
 		goto out;
@@ -635,7 +635,7 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 	/* Create a mixer source */
 	if (!sip_callid)
 	{
-		err = mixer_source_alloc(&mixer_source, mixer, id,
+		err = sync_mixer_source_alloc(&mixer_source, mixer, id,
 				nosip_call, NULL);
 		if (err) {
 			warning("sync_b2bua: mixer_source_alloc failed (%m)\n",
@@ -655,7 +655,7 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 			goto out;
 		}
 
-		err = mixer_source_alloc(&mixer_source, mixer, id,
+		err = sync_mixer_source_alloc(&mixer_source, mixer, id,
 				nosip_call, call_audio(sess->sip_call));
 		if (err) {
 			warning("sync_b2bua: mixer_source_alloc failed (%m)\n",
@@ -679,10 +679,10 @@ int mixer_source_add(struct mbuf **answer, const char *id,
 	list_append(&mixer_sourcel, &mixer_source->le, mixer_source);
 
 	/* Set the audio play device name */
-	audio_set_devicename(nosip_call_audio(nosip_call), "", id);
+	audio_set_devicename(sync_nosip_call_audio(nosip_call), "", id);
 
 	/* Set audio player to the just allocated one */
-	err = audio_set_player(nosip_call_audio(nosip_call), "aumix", id);
+	err = audio_set_player(sync_nosip_call_audio(nosip_call), "aumix", id);
 	if (err) {
 		warning("mixer_source: audio_set_player failed (%m)\n", err);
 		goto out;
@@ -703,7 +703,7 @@ int mixer_source_add(struct mbuf **answer, const char *id,
  *
  * @return 0 if success, otherwise errorcode
  */
-int mixer_source_del(const char *id)
+int sync_mixer_source_del(const char *id)
 {
 	struct mixer_source *src;
 
@@ -730,7 +730,7 @@ int mixer_source_del(const char *id)
  *
  * @return 0 if success, otherwise errorcode
  */
-int mixer_source_enable(const char *id, const char *sip_callid)
+int sync_mixer_source_enable(const char *id, const char *sip_callid)
 {
 	struct mixer_source *src;
 	struct session *sess;
@@ -773,7 +773,7 @@ int mixer_source_enable(const char *id, const char *sip_callid)
 		}
 	}
 	else {
-		device_enable(src->dev);
+		sync_device_enable(src->dev);
 	}
 
  out:
@@ -787,7 +787,7 @@ int mixer_source_enable(const char *id, const char *sip_callid)
  *
  * @return 0 if success, otherwise errorcode
  */
-int mixer_source_disable(const char *id)
+int sync_mixer_source_disable(const char *id)
 {
 	struct mixer_source *src;
 	struct aumix_source *aumix_src;
@@ -801,7 +801,7 @@ int mixer_source_disable(const char *id)
 		return EINVAL;
 	}
 
-	aumix_src = device_aumix_src(src->dev);
+	aumix_src = sync_device_aumix_src(src->dev);
 	if (!aumix_src)
 		goto out;
 
@@ -818,7 +818,7 @@ int mixer_source_disable(const char *id)
  *
  * @return 0 if success, otherwise errorcode
  */
-int mixer_play(const char *file)
+int sync_mixer_play(const char *file)
 {
 	struct config *cfg = conf_config();
 	char filepath[256];
@@ -860,9 +860,9 @@ static int module_init(void)
 	ua_set_catchall(sip_ua, true);
 
 	/* Register the mixer source and player */
-	err = ausrc_register(&ausrc, baresip_ausrcl(), "aumix", src_alloc);
+	err = ausrc_register(&ausrc, baresip_ausrcl(), "aumix", sync_src_alloc);
 	err |= auplay_register(&auplay, baresip_auplayl(),
-			  "aumix", play_alloc);
+			  "aumix", sync_play_alloc);
 	if (err) {
 		warning("ausrc\n");
 		return err;

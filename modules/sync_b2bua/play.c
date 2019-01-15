@@ -30,7 +30,7 @@ static void *write_thread(void *arg)
 	struct auplay_st *st = arg;
 	struct aumix_source *aumix_src;
 
-	aumix_src = device_aumix_src(st->dev);
+	aumix_src = sync_device_aumix_src(st->dev);
 
 	while (st->run) {
 
@@ -57,7 +57,7 @@ static void *write_thread(void *arg)
 }
 
 
-int play_alloc(struct auplay_st **stp, const struct auplay *ap,
+int sync_play_alloc(struct auplay_st **stp, const struct auplay *ap,
 		   struct auplay_prm *prm, const char *device,
 		   auplay_write_h *wh, void *arg)
 {
@@ -68,7 +68,7 @@ int play_alloc(struct auplay_st **stp, const struct auplay *ap,
 	if (!stp || !ap || !prm || !wh)
 		return EINVAL;
 
-	dev = device_find(device);
+	dev = sync_device_find(device);
 	if (!dev) {
 		warning("aumix: no device found: '%s'\n", device);
 		return ENOENT;
@@ -97,7 +97,7 @@ int play_alloc(struct auplay_st **stp, const struct auplay *ap,
 	}
 
 	st->dev = dev;
-	device_enable(dev);
+	sync_device_enable(dev);
 
 	st->run = true;
 	err = pthread_create(&st->thread, NULL, write_thread, st);
