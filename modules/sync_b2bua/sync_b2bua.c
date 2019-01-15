@@ -387,7 +387,7 @@ int sync_nosip_call_connect(const char *id, const char *sip_callid,
 
 
 /**
- * Terminate a nosip call state object
+ * Terminate a SIP call state object
  *
  * @param sip_callid ID of the SIP call to be connected to
  * @param reason     Hangup reason
