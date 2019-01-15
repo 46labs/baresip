@@ -98,7 +98,9 @@ static bool list_apply_session_by_sip_callid_handler(struct le *le, void *arg)
 {
 	struct session *st = le->data;
 
-	return (st->sip_call && !strcmp(call_id(st->sip_call), arg));
+	return (st->sip_call
+			&& arg
+			&& !str_cmp(call_id(st->sip_call), arg));
 }
 
 
@@ -119,7 +121,8 @@ static bool list_apply_session_by_nosip_callid_handler(
 	struct session *st = le->data;
 
 	return (st->nosip_call
-			&& !strcmp(sync_nosip_call_id(st->nosip_call), arg));
+			&& arg
+			&& !str_cmp(sync_nosip_call_id(st->nosip_call), arg));
 }
 
 
@@ -139,7 +142,8 @@ static bool list_apply_mixer_source_handler(struct le *le, void *arg)
 	struct mixer_source *st = le->data;
 
 	return (st->nosip_call
-			&& !strcmp(sync_nosip_call_id(st->nosip_call), arg));
+			&& arg
+			&& !str_cmp(sync_nosip_call_id(st->nosip_call), arg));
 }
 
 
