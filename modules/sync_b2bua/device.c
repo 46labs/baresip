@@ -84,7 +84,10 @@ int sync_device_alloc(struct device **devp, struct aumix *mixer,
 	if (!dev)
 		return ENOMEM;
 
-	str_dup(&dev->name, name);
+	err = str_dup(&dev->name, name);
+	if (err)
+		return err;
+
 	dev->mixer = mixer;
 
 	/* Create the aumix source */
