@@ -860,7 +860,8 @@ static int module_init(void)
 	ua_set_catchall(sip_ua, true);
 
 	/* Register the mixer source and player */
-	err = ausrc_register(&ausrc, baresip_ausrcl(), "aumix", sync_src_alloc);
+	err = ausrc_register(&ausrc, baresip_ausrcl(), "aumix",
+			  sync_src_alloc);
 	err |= auplay_register(&auplay, baresip_auplayl(),
 			  "aumix", sync_play_alloc);
 	if (err) {
