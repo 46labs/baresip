@@ -40,8 +40,8 @@ int sync_src_alloc(struct ausrc_st **stp, const struct ausrc *as,
 
 int sync_device_alloc(struct device **devp, struct aumix* mixer,
 		   const char *name, bool enable_src);
-int sync_device_enable(struct device *dev);
-int sync_device_disable(struct device *dev);
+void sync_device_enable(struct device *dev);
+void sync_device_disable(struct device *dev);
 struct device *sync_device_find(const char *name);
 void sync_device_set_ausrc(struct device *st, struct ausrc_st *ausrc);
 struct aumix_source *sync_device_aumix_src(struct device *dev);
