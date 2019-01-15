@@ -362,7 +362,7 @@ int sync_nosip_call_connect(const char *id, const char *sip_callid,
 	sess->connected = true;
 
 	/**
-	 * The audio coming from SIP call is the souce of nosip call:
+	 * The audio coming from SIP call is the source of nosip call:
 	 * (audio player SIP call -> audio source nosip call)
 	 */
 	(void)re_snprintf(device, sizeof(device),
