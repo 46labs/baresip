@@ -206,7 +206,7 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 		return;
 	}
 
-	else if (call)
+	if (call)
 	{
 		struct session *sess;
 
