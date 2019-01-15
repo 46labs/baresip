@@ -168,8 +168,10 @@ static int new_session(struct call *call)
 	sess->connected = false;
 
 	err = ua_answer(call_get_ua(call), call);
-	if (err)
+	if (err) {
 		warning("sync_b2bua: ua_answer failed (%m)\n", err);
+		return err;
+	}
 
 	list_append(&sessionl, &sess->le, sess);
 
