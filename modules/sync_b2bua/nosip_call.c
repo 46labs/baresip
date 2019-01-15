@@ -98,6 +98,9 @@ int sync_nosip_call_alloc(struct nosip_call **callp, const char *id,
 
 	debug("nosip_call_alloc\n");
 
+	if (!callp || !id)
+		return EINVAL;
+
 	memset(&stream_prm, 0, sizeof(stream_prm));
 	stream_prm.use_rtp = true;
 	stream_prm.af      = AF_INET;
@@ -173,6 +176,9 @@ int sync_nosip_call_accept(struct nosip_call *call, struct mbuf *desc,
 		bool offer)
 {
 	int err;
+
+	if (!call || !desc)
+		return EINVAL;
 
 	/* reset buffer possition */
 	desc->pos = 0;
