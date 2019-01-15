@@ -111,25 +111,21 @@ int sync_device_alloc(struct device **devp, struct aumix *mixer,
 }
 
 
-int sync_device_enable(struct device *dev)
+void sync_device_enable(struct device *dev)
 {
 	if (!dev)
-		return ENOENT;
+		return;
 
 	aumix_source_enable(dev->aumix_src, true);
-
-	return 0;
 }
 
 
-int sync_device_disable(struct device *dev)
+void sync_device_disable(struct device *dev)
 {
 	if (!dev)
-		return ENOENT;
+		return;
 
 	aumix_source_enable(dev->aumix_src, false);
-
-	return 0;
 }
 
 
