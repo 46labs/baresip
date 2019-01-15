@@ -43,6 +43,9 @@ int sync_nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc,
 {
 	int err;
 
+	if (!call || !desc)
+		return EINVAL;
+
 	err = sdp_encode(desc, call->sdp, offer);
 	if (err) {
 		warning("nosip_call: sdp_encode failed (%m)\n", err);
