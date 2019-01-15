@@ -73,7 +73,8 @@ int sync_nosip_call_sdp_debug(const struct nosip_call *call, bool offer)
 
 void sync_nosip_call_sdp_media_debug(const struct nosip_call *call)
 {
-	info("%H\n", sdp_media_debug, stream_sdpmedia(audio_strm(call->audio)));
+	info("%H\n", sdp_media_debug,
+			stream_sdpmedia(audio_strm(call->audio)));
 }
 
 
