@@ -30,14 +30,6 @@ static void nosip_call_destructor(void *arg)
 }
 
 
-static int print_handler(const char *p, size_t size, void *arg)
-{
-	struct mbuf *mb = arg;
-
-	return mbuf_write_mem(mb, (uint8_t *)p, size);
-}
-
-
 int sync_nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc,
 		   bool offer)
 {
@@ -79,22 +71,9 @@ int sync_nosip_call_sdp_debug(const struct nosip_call *call, bool offer)
 }
 
 
-int sync_nosip_call_sdp_media_debug(const struct nosip_call *call)
+void sync_nosip_call_sdp_media_debug(const struct nosip_call *call)
 {
-	struct mbuf *mb = mbuf_alloc(2048);
-	struct re_printf pf = {print_handler, mb};
-	int err;
-
-	err = sdp_media_debug(&pf, stream_sdpmedia(audio_strm(call->audio)));
-
-	info("- - - - - S D P  M E D I A - - - - -\n"
-	    "%b"
-	    "- - - - - - - - - - - - - - - - - - -\n",
-	    mb->buf, mb->end);
-
-	mem_deref(mb);
-
-	return err;
+	info("%H\n", sdp_media_debug, stream_sdpmedia(audio_strm(call->audio)));
 }
 
 

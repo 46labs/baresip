@@ -44,7 +44,7 @@ int sync_nosip_call_accept(struct nosip_call *call, struct mbuf *desc,
 int sync_nosip_call_sdp_debug(const struct nosip_call *call, bool offer);
 int sync_nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc,
 		   bool offer);
-int sync_nosip_call_sdp_media_debug(const struct nosip_call *call);
+void sync_nosip_call_sdp_media_debug(const struct nosip_call *call);
 struct audio *sync_nosip_call_audio(const struct nosip_call *call);
 const char *sync_nosip_call_id(const struct nosip_call *call);
 void sync_nosip_audio_start(const struct nosip_call *call);
