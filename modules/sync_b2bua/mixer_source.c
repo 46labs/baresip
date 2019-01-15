@@ -33,7 +33,7 @@ static void mixer_source_destructor(void *arg)
  *
  * @return 0 if success, otherwise errorcode
  */
-int mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
+int sync_mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
 		   const char *device, struct nosip_call *nosip_call,
 		   struct audio *sip_call_audio)
 {
@@ -52,7 +52,7 @@ int mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
 	src->nosip_call = nosip_call;
 
 	/* Create aumix device */
-	err = device_alloc(&src->dev, aumix, device,
+	err = sync_device_alloc(&src->dev, aumix, device,
 			  sip_call_audio ? true : false);
 	if (err)
 		goto out;

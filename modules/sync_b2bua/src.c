@@ -14,11 +14,11 @@ static void ausrc_destructor(void *arg)
 {
 	struct ausrc_st *st = arg;
 
-	device_set_ausrc(st->dev, NULL);
+	sync_device_set_ausrc(st->dev, NULL);
 }
 
 
-int src_alloc(struct ausrc_st **stp, const struct ausrc *as,
+int sync_src_alloc(struct ausrc_st **stp, const struct ausrc *as,
 		   struct media_ctx **ctx,
 		   struct ausrc_prm *prm, const char *device,
 		   ausrc_read_h *rh, ausrc_error_h *errh, void *arg)
@@ -32,7 +32,7 @@ int src_alloc(struct ausrc_st **stp, const struct ausrc *as,
 	if (!stp || !as || !prm)
 		return EINVAL;
 
-	dev = device_find(device);
+	dev = sync_device_find(device);
 	if (!dev) {
 		warning("aumix: no device found: '%s'\n", device);
 		return ENOENT;
@@ -54,7 +54,7 @@ int src_alloc(struct ausrc_st **stp, const struct ausrc *as,
 	st->arg  = arg;
 
 	st->dev = dev;
-	device_set_ausrc(st->dev, st);
+	sync_device_set_ausrc(st->dev, st);
 
 	*stp = st;
 

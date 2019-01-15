@@ -38,7 +38,7 @@ static int print_handler(const char *p, size_t size, void *arg)
 }
 
 
-int nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc,
+int sync_nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc,
 		   bool offer)
 {
 	int err;
@@ -54,12 +54,12 @@ int nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc,
 }
 
 
-int nosip_call_sdp_debug(const struct nosip_call *call, bool offer)
+int sync_nosip_call_sdp_debug(const struct nosip_call *call, bool offer)
 {
 	struct mbuf *desc;
 	int err;
 
-	err = nosip_call_sdp_get(call, &desc, offer);
+	err = sync_nosip_call_sdp_get(call, &desc, offer);
 	if (err) {
 		goto out;
 	}
@@ -76,7 +76,7 @@ int nosip_call_sdp_debug(const struct nosip_call *call, bool offer)
 }
 
 
-int nosip_call_sdp_media_debug(const struct nosip_call *call)
+int sync_nosip_call_sdp_media_debug(const struct nosip_call *call)
 {
 	struct mbuf *mb = mbuf_alloc(2048);
 	struct re_printf pf = {print_handler, mb};
@@ -104,7 +104,7 @@ int nosip_call_sdp_media_debug(const struct nosip_call *call)
  *
  * @return 0 if success, otherwise errorcode
  */
-int nosip_call_alloc(struct nosip_call **callp, const char *id, bool offer)
+int sync_nosip_call_alloc(struct nosip_call **callp, const char *id, bool offer)
 {
 	const struct network *net = baresip_network();
 	const struct config *cfg = conf_config();
@@ -165,13 +165,13 @@ int nosip_call_alloc(struct nosip_call **callp, const char *id, bool offer)
  *
  * @return Audio object
  */
-struct audio *nosip_call_audio(const struct nosip_call *call)
+struct audio *sync_nosip_call_audio(const struct nosip_call *call)
 {
 	return call ? call->audio : NULL;
 }
 
 
-const char *nosip_call_id(const struct nosip_call *call)
+const char *sync_nosip_call_id(const struct nosip_call *call)
 {
 	return call ? call->id : NULL;
 }
@@ -186,7 +186,7 @@ const char *nosip_call_id(const struct nosip_call *call)
  *
  * @return 0 if success, otherwise errorcode
  */
-int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
+int sync_nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
 {
 	int err;
 
@@ -199,7 +199,7 @@ int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
 		goto out;
 	}
 
-	nosip_audio_start(call);
+	sync_nosip_audio_start(call);
 
  out:
 	return err;
@@ -212,7 +212,7 @@ int nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
  * @param call nosip Call object
  *
  */
-void nosip_audio_start(const struct nosip_call *call)
+void sync_nosip_audio_start(const struct nosip_call *call)
 {
 	const struct sdp_media *m;
 	const struct sdp_format *sc;
