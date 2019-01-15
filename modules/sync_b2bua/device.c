@@ -39,7 +39,7 @@ static bool list_apply_handler(struct le *le, void *arg)
 {
 	struct device *st = le->data;
 
-	return 0 == str_cmp(st->name, arg);
+	return arg && 0 == str_cmp(st->name, arg);
 }
 
 
