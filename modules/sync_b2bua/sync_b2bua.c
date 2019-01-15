@@ -59,6 +59,8 @@ static struct ua *sip_ua;
 static struct ausrc *ausrc;
 static struct auplay *auplay;
 
+struct hash *sync_ht_device;
+
 /* Audio mixer */
 static struct aumix *mixer;
 static struct list mixer_sourcel;
@@ -132,6 +134,7 @@ static struct mixer_source *get_mixer_source_by_id(const char *id)
 static int new_session(struct call *call)
 {
 	struct session *sess;
+	int err;
 
 	sess = mem_zalloc(sizeof(*sess), session_destructor);
 	if (!sess)
@@ -142,11 +145,13 @@ static int new_session(struct call *call)
 	sess->sip_call = call;
 	sess->connected = false;
 
-	ua_answer(call_get_ua(call), call);
+	err = ua_answer(call_get_ua(call), call);
+	if (err)
+		warning("sync_b2bua: ua_answer failed (%m)\n", err);
 
 	list_append(&sessionl, &sess->le, sess);
 
-	return 0;
+	return err;
 }
 
 
@@ -848,6 +853,11 @@ static int module_init(void)
 		return ENOENT;
 	}
 
+	/* Allocate device hash table (limited to 100 buckets) */
+	err = hash_alloc(&sync_ht_device, 256);
+	if (err)
+		return err;
+
 	err = cmd_register(baresip_commands(), cmdv, command_count);
 	if (err)
 		return err;
@@ -865,7 +875,6 @@ static int module_init(void)
 	err |= auplay_register(&auplay, baresip_auplayl(),
 			  "aumix", sync_play_alloc);
 	if (err) {
-		warning("ausrc\n");
 		return err;
 	}
 
@@ -888,6 +897,8 @@ static int module_close(void)
 
 	mem_deref(auplay);
 	mem_deref(ausrc);
+
+	sync_ht_device = mem_deref(sync_ht_device);
 
 	info("sync_b2bua: flushing %u sessions\n", list_count(&sessionl));
 	list_flush(&sessionl);

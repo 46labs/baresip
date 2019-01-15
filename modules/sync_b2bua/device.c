@@ -8,6 +8,7 @@
 #include <rem.h>
 #include <baresip.h>
 #include "aumix.h"
+#include "sync_b2bua.h"
 
 
 struct device {
@@ -20,20 +21,25 @@ struct device {
 };
 
 
-static struct list devicel;
-
-
 static void device_destructor(void *arg)
 {
 	struct device *dev = arg;
 
-	list_unlink(&dev->le);
+	hash_unlink(&dev->le);
 
 	mem_deref(dev->aumix_src);
 	mem_deref(dev->name);
 
 	dev->ausrc = NULL;
 	dev->auplay = NULL;
+}
+
+
+static bool list_apply_handler(struct le *le, void *arg)
+{
+	struct device *st = le->data;
+
+	return 0 == str_cmp(st->name, arg);
 }
 
 
@@ -90,7 +96,7 @@ int sync_device_alloc(struct device **devp, struct aumix *mixer,
 		goto out;
 	}
 
-	list_append(&devicel, &dev->le, dev);
+	hash_append(sync_ht_device, hash_joaat_str(name), &dev->le, dev);
 
 	*devp = dev;
 
@@ -124,18 +130,10 @@ int sync_device_disable(struct device *dev)
 }
 
 
-struct device *sync_device_find(const char *name)
+struct device *sync_device_find(const char *device)
 {
-	struct le *le;
-
-	for (le = devicel.head; le; le = le->next) {
-		struct device *dev = le->data;
-
-		if (!strcmp(dev->name, name))
-			return dev;
-	}
-
-	return NULL;
+	return list_ledata(hash_lookup(sync_ht_device, hash_joaat_str(device),
+				       list_apply_handler, (void *)device));
 }
 
 
