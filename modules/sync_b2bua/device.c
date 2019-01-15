@@ -50,7 +50,7 @@ static void aumix_frame_handler(const int16_t *sampv, size_t sampc, void *arg)
 
 	as = dev->ausrc;
 
-	if (!as)
+	if (!as || !as->rh)
 		return;
 
 	as->rh(sampv, sampc, as->arg);
