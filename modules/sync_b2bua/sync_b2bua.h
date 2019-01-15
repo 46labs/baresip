@@ -31,8 +31,10 @@ int sync_mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
 
 struct nosip_call;
 
-int sync_nosip_call_alloc(struct nosip_call **callp, const char *id, bool offer);
-int sync_nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer);
+int sync_nosip_call_alloc(struct nosip_call **callp, const char *id,
+		bool offer);
+int sync_nosip_call_accept(struct nosip_call *call, struct mbuf *desc,
+		bool offer);
 int sync_nosip_call_sdp_debug(const struct nosip_call *call, bool offer);
 int sync_nosip_call_sdp_get(const struct nosip_call *call, struct mbuf **desc,
 		   bool offer);

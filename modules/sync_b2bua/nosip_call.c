@@ -104,7 +104,8 @@ int sync_nosip_call_sdp_media_debug(const struct nosip_call *call)
  *
  * @return 0 if success, otherwise errorcode
  */
-int sync_nosip_call_alloc(struct nosip_call **callp, const char *id, bool offer)
+int sync_nosip_call_alloc(struct nosip_call **callp, const char *id,
+		bool offer)
 {
 	const struct network *net = baresip_network();
 	const struct config *cfg = conf_config();
@@ -186,7 +187,8 @@ const char *sync_nosip_call_id(const struct nosip_call *call)
  *
  * @return 0 if success, otherwise errorcode
  */
-int sync_nosip_call_accept(struct nosip_call *call, struct mbuf *desc, bool offer)
+int sync_nosip_call_accept(struct nosip_call *call, struct mbuf *desc,
+		bool offer)
 {
 	int err;
 
