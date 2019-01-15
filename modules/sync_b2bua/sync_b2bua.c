@@ -72,6 +72,8 @@ struct hash *sync_ht_device;
 static struct aumix *mixer;
 static struct list mixer_sourcel;
 
+/* Hash table indexing mixer_sources by id (nosip callid) */
+static struct hash *ht_mixer_source;
 
 static void session_destructor(void *arg)
 {
@@ -90,6 +92,8 @@ static void session_destructor(void *arg)
 }
 
 
+/* ht_session_by_sip_callid lookup helpers */
+
 static bool list_apply_session_by_sip_callid_handler(struct le *le, void *arg)
 {
 	struct session *st = le->data;
@@ -104,6 +108,8 @@ static struct session *get_session_by_sip_callid(const char* id)
 				       list_apply_session_by_sip_callid_handler, (void *)id));
 }
 
+
+/* ht_session_by_nosip_callid lookup helpers */
 
 static bool list_apply_session_by_nosip_callid_handler(struct le *le, void *arg)
 {
@@ -120,22 +126,20 @@ static struct session *get_session_by_nosip_callid(const char *id)
 }
 
 
-static struct mixer_source *get_mixer_source_by_id(const char *id)
+/* ht_mixer_source lookup helpers */
+
+static bool list_apply_mixer_source_handler(struct le *le, void *arg)
 {
-	struct le *le;
+	struct mixer_source *st = le->data;
 
-	for ((le) = list_head((&mixer_sourcel)); (le); (le) = (le)->next) {
-		struct mixer_source *src = le->data;
+	return (st->nosip_call && !strcmp(sync_nosip_call_id(st->nosip_call), arg));
+}
 
-		/* This should never happen */
-		if (!src->nosip_call)
-			continue;
 
-		if (!strcmp(sync_nosip_call_id(src->nosip_call), id))
-			return src;
-	}
-
-	return NULL;
+static struct mixer_source *get_mixer_source_by_id(const char* id)
+{
+	return list_ledata(hash_lookup(ht_mixer_source, hash_joaat_str(id),
+				       list_apply_mixer_source_handler, (void *)id));
 }
 
 
@@ -697,6 +701,9 @@ int sync_mixer_source_add(struct mbuf **answer, const char *id,
 
 	list_append(&mixer_sourcel, &mixer_source->le, mixer_source);
 
+	/* Index the mixer source by id */
+	hash_append(ht_mixer_source, hash_joaat_str(id), &mixer_source->leh, mixer_source);
+
 	/* Set the audio play device name */
 	audio_set_devicename(sync_nosip_call_audio(nosip_call), "", id);
 
@@ -881,6 +888,11 @@ static int module_init(void)
 	if (err)
 		return err;
 
+	/* Allocate mixer_source hash table */
+	err = hash_alloc(&ht_mixer_source, 256);
+	if (err)
+		return err;
+
 	err = cmd_register(baresip_commands(), cmdv, command_count);
 	if (err)
 		return err;
@@ -928,6 +940,9 @@ static int module_close(void)
 
 	hash_clear(ht_session_by_nosip_callid);
 	ht_session_by_nosip_callid = mem_deref(ht_session_by_nosip_callid);
+
+	hash_clear(ht_mixer_source);
+	ht_mixer_source = mem_deref(ht_mixer_source);
 
 	info("sync_b2bua: flushing %u sessions\n", list_count(&sessionl));
 	list_flush(&sessionl);

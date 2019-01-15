@@ -16,6 +16,7 @@ size_t sync_session_count(void);
 
 struct mixer_source {
 	struct le le;
+	struct le leh;
 	struct nosip_call *nosip_call;
 	struct device *dev;
 };

@@ -16,6 +16,7 @@ static void mixer_source_destructor(void *arg)
 	struct mixer_source *src = arg;
 
 	list_unlink(&src->le);
+	hash_unlink(&src->leh);
 
 	mem_deref(src->nosip_call);
 	mem_deref(src->dev);
