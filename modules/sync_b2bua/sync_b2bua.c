@@ -572,7 +572,7 @@ int sync_play_list(struct odict *od_array)
 	struct le *le;
 	int err;
 
-	for ((le) = list_head((&sessionl)); (le); (le) = (le)->next) {
+	for (le = list_head((&sessionl)); (le); (le) = (le)->next) {
 		struct session *sess = le->data;
 
 		if (!sess->play)
