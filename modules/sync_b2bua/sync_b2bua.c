@@ -494,6 +494,10 @@ int sync_play_start(const char *sip_callid, const char *file, bool loop)
 		goto out;
 	}
 
+
+	/* Stop any file playback on this session */
+	sess->play = mem_deref(sess->play);
+
 	/**
 	 * 'playfile' creates an 'auplay' state considering the audio alert
 	 *  module and device from the config.
@@ -520,9 +524,6 @@ int sync_play_start(const char *sip_callid, const char *file, bool loop)
 		warning("sync_b2bua: audio_set_source failed: (%m)\n", err);
 		goto out;
 	}
-
-	/* Stop any file playback */
-	sess->play = mem_deref(sess->play);
 
 	err |= play_file(&sess->play, player, file, loop ? -1: 1);
 	if (err)
