@@ -129,7 +129,7 @@ int sync_nosip_call_alloc(struct nosip_call **callp, const char *id,
 			NULL /* menc */, NULL /* menc_sess */,
 			20 /* ptime */, baresip_aucodecl(), offer,
 			NULL /* audio_event_h */, NULL /* audio_err_h */,
-			call);
+			NULL /* handlers arg */);
 	if (err) {
 		warning("nosip_call: audio_alloc failed (%m)\n", err);
 		goto out;
