@@ -62,7 +62,7 @@ int sync_nosip_call_create(struct mbuf **mb, const char *id,
 int sync_nosip_call_connect(const char *id, const char *sip_callid,
 		   struct mbuf *mb);
 int sync_sip_call_hangup(const char *sip_callid, const char *reason);
-int sync_status(struct re_printf *pf);
+int sync_status(struct re_printf *pf, void *arg);
 int sync_play_start(const char *sip_callid, const char *file, bool loop);
 int sync_play_stop(const char *sip_callid);
 int sync_play_list(struct odict *od_array);

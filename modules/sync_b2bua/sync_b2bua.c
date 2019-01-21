@@ -414,8 +414,10 @@ int sync_sip_call_hangup(const char *sip_callid, const char *reason)
 }
 
 
-int sync_status(struct re_printf *pf)
+int sync_status(struct re_printf *pf, void *arg)
 {
+	(void)arg;
+
 	struct le *le;
 	int i;
 	int err = 0;
