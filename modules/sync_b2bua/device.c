@@ -29,9 +29,6 @@ static void device_destructor(void *arg)
 
 	mem_deref(dev->aumix_src);
 	mem_deref(dev->name);
-
-	dev->ausrc = NULL;
-	dev->auplay = NULL;
 }
 
 
