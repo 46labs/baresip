@@ -473,6 +473,7 @@ int sync_play_start(const char *sip_callid, const char *file, bool loop)
 {
 	static const char module[9] = "aubridge";
 
+	struct config *cfg = conf_config();
 	struct player *player = baresip_player();
 	struct session *sess;
 	char device[64];
@@ -488,7 +489,6 @@ int sync_play_start(const char *sip_callid, const char *file, bool loop)
 		goto out;
 	}
 
-	struct config *cfg = conf_config();
 	if (!cfg){
 		err = ENOENT;
 		goto out;
