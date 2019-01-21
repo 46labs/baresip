@@ -956,6 +956,9 @@ static int module_close(void)
 	mem_deref(auplay);
 	mem_deref(ausrc);
 
+	auplay = NULL;
+	ausrc = NULL;
+
 	sync_ht_device = mem_deref(sync_ht_device);
 
 	hash_clear(ht_session_by_sip_callid);
