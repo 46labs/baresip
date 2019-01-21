@@ -239,7 +239,7 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 
 
 /* Get the current number of sessions */
-size_t sync_session_count()
+size_t sync_session_count(void)
 {
 	return list_count(&sessionl);
 }
