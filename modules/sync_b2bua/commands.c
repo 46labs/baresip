@@ -7,6 +7,18 @@
 #include "sync_b2bua.h"
 
 
+static int request_decode(struct odict **od, const char *param)
+{
+	int err;
+
+	/* Retrieve command params */
+	err = json_decode_odict(od, 32, param, str_len(param), 16);
+	if (err)
+		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+
+	return err;
+}
+
 /**
  * Create a nosip call state object
  *
@@ -30,11 +42,9 @@ static int cmd_nosip_call_create(struct re_printf *pf, void *arg)
 	int err;
 
 	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
+	err = request_decode(&od, param);
+	if (err)
+		goto out;
 
 	id = odict_string(od, "id");
 	sip_callid = odict_string(od, "sip_callid");
@@ -104,11 +114,9 @@ static int cmd_nosip_call_connect(struct re_printf *pf, void *arg)
 	(void)pf;
 
 	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
+	err = request_decode(&od, param);
+	if (err)
+		goto out;
 
 	id = odict_string(od, "id");
 	sip_callid = odict_string(od, "sip_callid");
@@ -167,11 +175,9 @@ static int cmd_sip_call_hangup(struct re_printf *pf, void *arg)
 	(void)pf;
 
 	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
+	err = request_decode(&od, param);
+	if (err)
+		goto out;
 
 	sip_callid = odict_string(od, "sip_callid");
 	if (!sip_callid) {
@@ -232,11 +238,9 @@ static int cmd_play_start(struct re_printf *pf, void *arg)
 	(void)pf;
 
 	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
+	err = request_decode(&od, param);
+	if (err)
+		goto out;
 
 	sip_callid = odict_string(od, "sip_callid");
 	file = odict_string(od, "file");
@@ -281,11 +285,9 @@ static int cmd_play_stop(struct re_printf *pf, void *arg)
 	(void)pf;
 
 	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+	err = request_decode(&od, param);
+	if (err)
 		goto out;
-	}
 
 	sip_callid = odict_string(od, "sip_callid");
 	if (!sip_callid) {
@@ -394,11 +396,9 @@ static int cmd_mixer_source_add(struct re_printf *pf, void *arg)
 	int err;
 
 	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+	err = request_decode(&od, param);
+	if (err)
 		goto out;
-	}
 
 	id = odict_string(od, "id");
 	desc = odict_string(od, "desc");
@@ -467,11 +467,9 @@ static int cmd_mixer_source_del(struct re_printf *pf, void *arg)
 	(void)pf;
 
 	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
+	err = request_decode(&od, param);
+	if (err)
+		goto out;
 
 	id = odict_string(od, "id");
 	if (!id) {
@@ -514,11 +512,9 @@ static int cmd_mixer_source_enable(struct re_printf *pf, void *arg)
 	(void)pf;
 
 	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
+	err = request_decode(&od, param);
+	if (err)
 		goto out;
-	}
 
 	id = odict_string(od, "id");
 	if (!id) {
@@ -566,11 +562,9 @@ static int cmd_mixer_source_disable(struct re_printf *pf, void *arg)
 	(void)pf;
 
 	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
+	err = request_decode(&od, param);
+	if (err)
+		goto out;
 
 	id = odict_string(od, "id");
 	if (!id) {
@@ -608,11 +602,9 @@ static int cmd_mixer_play(struct re_printf *pf, void *arg)
 	(void)pf;
 
 	/* Retrieve command params */
-	err = json_decode_odict(&od, 32, param, str_len(param), 16);
-	if (err) {
-		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
-		return err;
-	}
+	err = request_decode(&od, param);
+	if (err)
+		goto out;
 
 	file = odict_string(od, "file");
 	if (!file) {
