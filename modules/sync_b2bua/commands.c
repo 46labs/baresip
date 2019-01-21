@@ -142,6 +142,7 @@ static int cmd_nosip_call_connect(struct re_printf *pf, void *arg)
 		goto out;
 
 	/* Connect the nosip_call() */
+	mb->pos = 0;
 	err = sync_nosip_call_connect(id, sip_callid, mb);
 	if (err)
 		goto out;
