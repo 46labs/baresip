@@ -363,13 +363,7 @@ static int cmd_play_list(struct re_printf *pf, void *arg)
  */
 static int cmd_rtp_capabilities(struct re_printf *pf, void *arg)
 {
-	int err;
-
-	(void)arg;
-
-	err = sync_rtp_capabilities(pf);
-
-	return err;
+	return re_hprintf(pf, "%H", sync_rtp_capabilities, arg);
 }
 
 
