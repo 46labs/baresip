@@ -6,13 +6,17 @@
 #include <re.h>
 #include "sync_b2bua.h"
 
+enum {
+  HASH_SIZE = 32,
+  MAX_DEPTH = 16,
+};
 
 static int request_decode(struct odict **od, const char *param)
 {
 	int err;
 
 	/* Retrieve command params */
-	err = json_decode_odict(od, 32, param, str_len(param), 16);
+	err = json_decode_odict(od, HASH_SIZE, param, str_len(param), MAX_DEPTH);
 	if (err)
 		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
 
