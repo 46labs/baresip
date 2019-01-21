@@ -181,7 +181,7 @@ int sync_nosip_call_accept(struct nosip_call *call, struct mbuf *desc,
 	if (!call || !desc)
 		return EINVAL;
 
-	/* reset buffer possition */
+	/* reset buffer position */
 	desc->pos = 0;
 
 	err = sdp_decode(call->sdp, desc, offer);
