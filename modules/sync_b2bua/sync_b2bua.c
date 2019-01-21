@@ -45,7 +45,8 @@
 
 
 enum {
-	HASH_SIZE = 256
+	HASH_SIZE = 256,
+	MAX_FILE_PATH_LENGTH = 256,
 };
 
 struct session {
@@ -869,7 +870,7 @@ int sync_mixer_source_disable(const char *id)
 int sync_mixer_play(const char *file)
 {
 	struct config *cfg = conf_config();
-	char filepath[256];
+	char filepath[MAX_FILE_PATH_LENGTH];
 	int err;
 
 	(void)re_snprintf(filepath, sizeof(filepath), "%s/%s",
