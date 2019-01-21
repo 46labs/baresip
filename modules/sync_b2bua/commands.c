@@ -205,13 +205,7 @@ static int cmd_sip_call_hangup(struct re_printf *pf, void *arg)
 
 static int cmd_status(struct re_printf *pf, void *arg)
 {
-	int err;
-
-	(void)arg;
-
-	err = sync_status(pf);
-
-	return err;
+	return re_hprintf(pf, "%H", sync_status, arg);
 }
 
 
