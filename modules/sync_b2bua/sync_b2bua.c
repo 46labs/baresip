@@ -44,6 +44,10 @@
  */
 
 
+enum {
+	HASH_SIZE = 256
+};
+
 struct session {
 	struct le le;
 	struct le leh_sip;
@@ -895,7 +899,7 @@ static int module_init(void)
 	}
 
 	/* Allocate device hash table */
-	err = hash_alloc(&sync_ht_device, 256);
+	err = hash_alloc(&sync_ht_device, HASH_SIZE);
 	if (err)
 		return err;
 
@@ -903,13 +907,13 @@ static int module_init(void)
 	 * Allocate session hash table
 	 * (sessions indexed by SIP callid and nosip callid)
 	 */
-	err = hash_alloc(&ht_session_by_sip_callid, 256);
-	err |= hash_alloc(&ht_session_by_nosip_callid, 256);
+	err = hash_alloc(&ht_session_by_sip_callid, HASH_SIZE);
+	err |= hash_alloc(&ht_session_by_nosip_callid, HASH_SIZE);
 	if (err)
 		return err;
 
 	/* Allocate mixer_source hash table */
-	err = hash_alloc(&ht_mixer_source, 256);
+	err = hash_alloc(&ht_mixer_source, HASH_SIZE);
 	if (err)
 		return err;
 
