@@ -210,8 +210,7 @@ static void ua_event_handler(struct ua *ua, enum ua_event ev,
 		return;
 	}
 
-	if (call)
-	{
+	if (call) {
 		struct session *sess;
 
 		sess = get_session_by_sip_callid(call_id(call));
@@ -679,8 +678,7 @@ int sync_mixer_source_add(struct mbuf **answer, const char *id,
 	}
 
 	/* Create a mixer source */
-	if (!sip_callid)
-	{
+	if (!sip_callid) {
 		err = sync_mixer_source_alloc(&mixer_source, mixer, id,
 				nosip_call, false);
 		if (err) {
@@ -689,8 +687,7 @@ int sync_mixer_source_add(struct mbuf **answer, const char *id,
 			goto out;
 		}
 	}
-	else
-	{
+	else {
 		/* Check that SIP call exist for the given SIP callid */
 		sess = get_session_by_sip_callid(sip_callid);
 		if (!sess) {
@@ -829,6 +826,7 @@ int sync_mixer_source_enable(const char *id, const char *sip_callid)
  out:
 	return err;
 }
+
 
 /**
  * Disable a mixer source.
