@@ -598,8 +598,10 @@ int sync_play_list(struct odict *od_array)
  *
  * @return 0 if success, otherwise errorcode
  */
-int sync_rtp_capabilities(struct re_printf *pf)
+int sync_rtp_capabilities(struct re_printf *pf, void *arg)
 {
+	(void)arg;
+
 	struct nosip_call *call;
 	struct mbuf *mb;
 	int err;

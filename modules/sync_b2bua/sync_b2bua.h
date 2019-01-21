@@ -66,7 +66,7 @@ int sync_status(struct re_printf *pf, void *arg);
 int sync_play_start(const char *sip_callid, const char *file, bool loop);
 int sync_play_stop(const char *sip_callid);
 int sync_play_list(struct odict *od_array);
-int sync_rtp_capabilities(struct re_printf *pf);
+int sync_rtp_capabilities(struct re_printf *pf, void *arg);
 int sync_mixer_source_add(struct mbuf **answer, const char *id,
 		   const char *sip_callid, struct mbuf *offer);
 int sync_mixer_source_del(const char *id);
