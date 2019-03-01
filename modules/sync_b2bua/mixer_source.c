@@ -8,7 +8,6 @@
 #include <rem.h>
 #include <baresip.h>
 #include "sync_b2bua.h"
-#include "aumix.h"
 
 
 static void mixer_source_destructor(void *arg)
@@ -19,7 +18,6 @@ static void mixer_source_destructor(void *arg)
 	hash_unlink(&src->leh);
 
 	mem_deref(src->nosip_call);
-	mem_deref(src->dev);
 }
 
 
@@ -34,12 +32,10 @@ static void mixer_source_destructor(void *arg)
  *
  * @return 0 if success, otherwise errorcode
  */
-int sync_mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
-		   const char *device, struct nosip_call *nosip_call,
-		   bool sip_call_related)
+int sync_mixer_source_alloc(struct mixer_source **srcp,
+		   const char *device, struct nosip_call *nosip_call)
 {
 	struct mixer_source *src;
-	int err;
 
 	debug("mixer_source_alloc [device:%s]\n", device);
 
@@ -52,17 +48,7 @@ int sync_mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
 
 	src->nosip_call = nosip_call;
 
-	/* Create aumix device */
-	err = sync_device_alloc(&src->dev, aumix, device,
-			  sip_call_related);
-	if (err)
-		goto out;
-
 	*srcp = src;
 
- out:
-	if (err)
-		mem_deref(src);
-
-	return err;
+	return 0;
 }

@@ -1,5 +1,5 @@
 /**
- * @file sync_b2bua/src.c Audio mixer source
+ * @file aumix/src.c Audio mixer source
  *
  * Copyright (C) 2018 46labs
  */
@@ -14,11 +14,13 @@ static void ausrc_destructor(void *arg)
 {
 	struct ausrc_st *st = arg;
 
-	sync_device_set_ausrc(st->dev, NULL);
+	aumix_device_set_ausrc(st->dev, NULL);
+
+	mem_deref(st->dev);
 }
 
 
-int sync_src_alloc(struct ausrc_st **stp, const struct ausrc *as,
+int aumix_src_alloc(struct ausrc_st **stp, const struct ausrc *as,
 		   struct media_ctx **ctx,
 		   struct ausrc_prm *prm, const char *device,
 		   ausrc_read_h *rh, ausrc_error_h *errh, void *arg)
@@ -31,12 +33,6 @@ int sync_src_alloc(struct ausrc_st **stp, const struct ausrc *as,
 
 	if (!stp || !as || !prm)
 		return EINVAL;
-
-	dev = sync_device_find(device);
-	if (!dev) {
-		warning("aumix: no device found: '%s'\n", device);
-		return ENOENT;
-	}
 
 	if (prm->fmt != AUFMT_S16LE) {
 		warning("aumix: unsupported sample format (%s)\n",
@@ -53,8 +49,17 @@ int sync_src_alloc(struct ausrc_st **stp, const struct ausrc *as,
 	st->rh   = rh;
 	st->arg  = arg;
 
-	st->dev = dev;
-	sync_device_set_ausrc(st->dev, st);
+	dev = aumix_device_find(device);
+	if (dev) {
+		st->dev = mem_ref(dev);
+	}
+	else {
+		err = aumix_device_alloc(&st->dev, device);
+		if (err)
+			return err;
+	}
+
+	aumix_device_set_ausrc(st->dev, st);
 
 	*stp = st;
 

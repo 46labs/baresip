@@ -18,18 +18,11 @@ struct mixer_source {
 	struct le le;
 	struct le leh;
 	struct nosip_call *nosip_call;
-	struct device *dev;
 };
 
-int sync_mixer_source_alloc(struct mixer_source **srcp, struct aumix *aumix,
-		   const char *device, struct nosip_call *nosip_call,
-		   bool sip_call_related);
+int sync_mixer_source_alloc(struct mixer_source **srcp,
+		   const char *device, struct nosip_call *nosip_call);
 
-
-/*
- * Device
- */
-extern struct hash *sync_ht_device;
 
 /*
  * nosip_call
@@ -72,4 +65,3 @@ int sync_mixer_source_add(struct mbuf **answer, const char *id,
 int sync_mixer_source_del(const char *id);
 int sync_mixer_source_enable(const char *id, const char *sip_callid);
 int sync_mixer_source_disable(const char *id);
-int sync_mixer_play(const char *file);

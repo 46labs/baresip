@@ -1,5 +1,5 @@
 /**
- * @file sync_b2bua/play.c Audio mixer playback
+ * @file aumix/play.c Audio mixer playback
  *
  * Copyright (C) 2018 46labs
  */
@@ -21,6 +21,7 @@ static void play_destructor(void *arg)
 	}
 
 	mem_deref(st->sampv);
+	mem_deref(st->dev);
 }
 
 
@@ -30,7 +31,7 @@ static void *write_thread(void *arg)
 	struct auplay_st *st = arg;
 	struct aumix_source *aumix_src;
 
-	aumix_src = sync_device_aumix_src(st->dev);
+	aumix_src = aumix_device_aumix_src(st->dev);
 
 	while (st->run) {
 
@@ -57,7 +58,7 @@ static void *write_thread(void *arg)
 }
 
 
-int sync_play_alloc(struct auplay_st **stp, const struct auplay *ap,
+int aumix_play_alloc(struct auplay_st **stp, const struct auplay *ap,
 		   struct auplay_prm *prm, const char *device,
 		   auplay_write_h *wh, void *arg)
 {
@@ -67,12 +68,6 @@ int sync_play_alloc(struct auplay_st **stp, const struct auplay *ap,
 
 	if (!stp || !ap || !prm || !wh)
 		return EINVAL;
-
-	dev = sync_device_find(device);
-	if (!dev) {
-		warning("aumix: no device found: '%s'\n", device);
-		return ENOENT;
-	}
 
 	if (prm->fmt != AUFMT_S16LE) {
 		warning("aumix: unsupported sample format (%s)\n",
@@ -96,8 +91,17 @@ int sync_play_alloc(struct auplay_st **stp, const struct auplay *ap,
 		goto out;
 	}
 
-	st->dev = dev;
-	sync_device_enable(dev);
+	dev = aumix_device_find(device);
+	if (dev) {
+		st->dev = mem_ref(dev);
+	}
+	else {
+		err = aumix_device_alloc(&st->dev, device);
+		if (err)
+			return err;
+	}
+
+	aumix_device_enable(dev);
 
 	st->run = true;
 	err = pthread_create(&st->thread, NULL, write_thread, st);

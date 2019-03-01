@@ -1,5 +1,5 @@
 /**
- * @file sync_b2bua/device.c Audio mixer pseudo-device
+ * @file aumix/device.c Audio mixer pseudo-device
  *
  * Copyright (C) 2018 46labs
  */
@@ -8,7 +8,6 @@
 #include <rem.h>
 #include <baresip.h>
 #include "aumix.h"
-#include "sync_b2bua.h"
 
 
 struct device {
@@ -19,7 +18,6 @@ struct device {
 	struct aumix_source *aumix_src;
 	char *name;
 };
-
 
 static void device_destructor(void *arg)
 {
@@ -60,14 +58,12 @@ static void aumix_frame_handler(const int16_t *sampv, size_t sampc, void *arg)
  * Allocate a device
  *
  * @param devp        Pointer to allocated device
- * @param mixer       Audio mixer
  * @param name        Device name
  * @param enable_src  True if ausrc needs to be created
  *
  * @return 0 if success, otherwise errorcode
  */
-int sync_device_alloc(struct device **devp, struct aumix *mixer,
-		   const char *name, bool enable_src)
+int aumix_device_alloc(struct device **devp, const char *name)
 {
 	struct device *dev;
 	int err;
@@ -89,14 +85,13 @@ int sync_device_alloc(struct device **devp, struct aumix *mixer,
 
 	/* Create the aumix source */
 	err = aumix_source_alloc(&dev->aumix_src, mixer,
-			enable_src ? aumix_frame_handler : NULL,
-			enable_src ? dev : NULL);
+			aumix_frame_handler, dev);
 	if (err) {
 		warning("aumix: aumix_source_alloc failed (%m)\n", err);
 		goto out;
 	}
 
-	hash_append(sync_ht_device, hash_joaat_str(name), &dev->le, dev);
+	hash_append(aumix_ht_device, hash_joaat_str(name), &dev->le, dev);
 
 	*devp = dev;
 
@@ -108,7 +103,7 @@ int sync_device_alloc(struct device **devp, struct aumix *mixer,
 }
 
 
-void sync_device_enable(struct device *dev)
+void aumix_device_enable(struct device *dev)
 {
 	if (!dev)
 		return;
@@ -117,7 +112,7 @@ void sync_device_enable(struct device *dev)
 }
 
 
-void sync_device_disable(struct device *dev)
+void aumix_device_disable(struct device *dev)
 {
 	if (!dev)
 		return;
@@ -126,14 +121,14 @@ void sync_device_disable(struct device *dev)
 }
 
 
-struct device *sync_device_find(const char *device)
+struct device *aumix_device_find(const char *device)
 {
-	return list_ledata(hash_lookup(sync_ht_device, hash_joaat_str(device),
+	return list_ledata(hash_lookup(aumix_ht_device, hash_joaat_str(device),
 				       list_apply_handler, (void *)device));
 }
 
 
-void sync_device_set_ausrc(struct device *dev, struct ausrc_st *ausrc)
+void aumix_device_set_ausrc(struct device *dev, struct ausrc_st *ausrc)
 {
 	if (!dev)
 		return;
@@ -142,16 +137,16 @@ void sync_device_set_ausrc(struct device *dev, struct ausrc_st *ausrc)
 	 * Disable the device to avoid 'aumix_frame_handler'
 	 * from being executed
 	 */
-	sync_device_disable(dev);
+	aumix_device_disable(dev);
 
 	dev->ausrc = ausrc;
 
 	if (ausrc)
-		sync_device_enable(dev);
+		aumix_device_enable(dev);
 }
 
 
-struct aumix_source *sync_device_aumix_src(struct device *dev)
+struct aumix_source *aumix_device_aumix_src(struct device *dev)
 {
 	if (!dev)
 		return NULL;

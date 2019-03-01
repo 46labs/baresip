@@ -268,6 +268,7 @@ MODULES   += $(EXTRA_MODULES)
 ifneq ($(BASIC_MODULES),no)
 MODULES   += account
 MODULES   += auloop
+MODULES   += aumix
 MODULES   += b2bua
 MODULES   += contact
 MODULES   += ctrl_tcp

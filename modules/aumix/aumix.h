@@ -1,5 +1,5 @@
 /**
- * @file sync_b2bua/aumix.h Audio mixer -- internal interface
+ * @file aumix/aumix.h Audio mixer -- internal interface
  *
  * Copyright (C) 2018 46labs
  */
@@ -29,19 +29,24 @@ struct auplay_st {
 	void *arg;
 };
 
-int sync_play_alloc(struct auplay_st **stp, const struct auplay *ap,
+/* Audio mixer */
+struct aumix *mixer;
+
+/* Device */
+extern struct hash *aumix_ht_device;
+
+int aumix_play_alloc(struct auplay_st **stp, const struct auplay *ap,
 	       struct auplay_prm *prm, const char *device,
 	       auplay_write_h *wh, void *arg);
 
-int sync_src_alloc(struct ausrc_st **stp, const struct ausrc *as,
+int aumix_src_alloc(struct ausrc_st **stp, const struct ausrc *as,
 	      struct media_ctx **ctx,
 	      struct ausrc_prm *prm, const char *device,
 	      ausrc_read_h *rh, ausrc_error_h *errh, void *arg);
 
-int sync_device_alloc(struct device **devp, struct aumix* mixer,
-		   const char *name, bool enable_src);
-void sync_device_enable(struct device *dev);
-void sync_device_disable(struct device *dev);
-struct device *sync_device_find(const char *name);
-void sync_device_set_ausrc(struct device *st, struct ausrc_st *ausrc);
-struct aumix_source *sync_device_aumix_src(struct device *dev);
+int aumix_device_alloc(struct device **devp, const char *name);
+void aumix_device_enable(struct device *dev);
+void aumix_device_disable(struct device *dev);
+struct device *aumix_device_find(const char *name);
+void aumix_device_set_ausrc(struct device *st, struct ausrc_st *ausrc);
+struct aumix_source *aumix_device_aumix_src(struct device *dev);

@@ -5,10 +5,8 @@
  */
 #include <string.h>
 #include <re.h>
-#include <rem.h>
 #include <baresip.h>
 #include "sync_b2bua.h"
-#include "aumix.h"
 
 
 /**
@@ -24,20 +22,20 @@
 
  SIP Audio -> nosip Audio pipeline (aubridge audio driver):
 
- .       .--------.   .----------.   .-------.
- |       |        |   |          |   |       |
+ .        .--------.   .----------.   .-------.
+ |        |        |   |          |   |       |
  | RTP -->| auplay |-->| aubridge |-->| ausrc |---> RTP
- |       |        |   |          |   |       |
- '       '--------'   '----------'   '-------'
+ |        |        |   |          |   |       |
+ '        '--------'   '----------'   '-------'
 
 
  nosip Audio -> SIP Audio pipeline (aumix audio driver):
 
- .       .--------.   .-------.   .-------.
- |       |        |   |       |   |       |
+ .        .--------.   .-------.   .-------.
+ |        |        |   |       |   |       |
  | RTP -->| auplay |-->| aumix |-->| ausrc |---> RTP
- |       |        |   |       |   |       |
- '       '--------'   '-------'   '-------'
+ |        |        |   |       |   |       |
+ '        '--------'   '-------'   '-------'
 
  \endverbatim
  *
@@ -68,13 +66,6 @@ static struct hash *ht_session_by_sip_callid;
 /* Hash table indexing sessions by nosip callid */
 static struct hash *ht_session_by_nosip_callid;
 
-static struct ausrc *ausrc;
-static struct auplay *auplay;
-
-struct hash *sync_ht_device;
-
-/* Audio mixer */
-static struct aumix *mixer;
 static struct list mixer_sourcel;
 
 /* Hash table indexing mixer_sources by id (nosip callid) */
@@ -447,7 +438,7 @@ int sync_status(struct re_printf *pf, void *arg)
 			goto out;
 	}
 
-	err |= re_hprintf(pf, "Mixer: (%zup)\n\n", aumix_source_count(mixer));
+	err |= re_hprintf(pf, "Mixer:\n\n");
 
 	for (le = mixer_sourcel.head, i=1; le; le = le->next, i++) {
 		struct mixer_source *src = le->data;
@@ -680,8 +671,7 @@ int sync_mixer_source_add(struct mbuf **answer, const char *id,
 
 	/* Create a mixer source */
 	if (!sip_callid) {
-		err = sync_mixer_source_alloc(&mixer_source, mixer, id,
-				nosip_call, false);
+		err = sync_mixer_source_alloc(&mixer_source, id, nosip_call);
 		if (err) {
 			warning("sync_b2bua: mixer_source_alloc failed (%m)\n",
 				err);
@@ -699,8 +689,7 @@ int sync_mixer_source_add(struct mbuf **answer, const char *id,
 			goto out;
 		}
 
-		err = sync_mixer_source_alloc(&mixer_source, mixer, id,
-				nosip_call, true);
+		err = sync_mixer_source_alloc(&mixer_source, id, nosip_call);
 		if (err) {
 			warning("sync_b2bua: mixer_source_alloc failed (%m)\n",
 					err);
@@ -769,7 +758,6 @@ int sync_mixer_source_del(const char *id)
 	return 0;
 }
 
-
 /**
  * Enable a mixer source.
  *
@@ -813,81 +801,28 @@ int sync_mixer_source_enable(const char *id, const char *sip_callid)
 		 * the aumix_source will be enabled.
 		 */
 		err = audio_set_source(call_audio(sess->sip_call),
-				  "aumix", id);
+					"aumix", id);
 		if (err) {
 			warning("mixer_source: audio_set_source failed (%m)\n",
 					err);
 			goto out;
 		}
 	}
-	else {
-		sync_device_enable(src->dev);
-	}
 
- out:
+out:
 	return err;
 }
 
 
-/**
- * Disable a mixer source.
- *
- * @param id ID for the mixer source to be deleted
- *
- * @return 0 if success, otherwise errorcode
- */
 int sync_mixer_source_disable(const char *id)
 {
-	struct mixer_source *src;
-	struct aumix_source *aumix_src;
+	(void)id;
 
-	/* Check that a mixer source exists for the given id */
-	src = get_mixer_source_by_id(id);
-	if (!src) {
-		warning("sync_b2bua: no mixer source found for"
-				" the given id: %s\n",
-				id);
-		return EINVAL;
-	}
-
-	aumix_src = sync_device_aumix_src(src->dev);
-	if (!aumix_src)
-		goto out;
-
-	aumix_source_enable(aumix_src, false);
-
- out:
 	return 0;
 }
 
-/**
- * Play an audio file into the mixer.
- *
- * @param file  Name of the file to be played
- *
- * @return 0 if success, otherwise errorcode
- */
-int sync_mixer_play(const char *file)
-{
-	struct config *cfg = conf_config();
-	char filepath[MAX_FILE_PATH_LENGTH];
-	int err;
-
-	(void)re_snprintf(filepath, sizeof(filepath), "%s/%s",
-			  cfg->audio.audio_path, file);
-
-	err = aumix_playfile(mixer, filepath);
-	if (err)
-		warning("sync_b2bua: mixer_play failed (%m)\n", err);
-
-	return err;
-}
-
-
 static int module_init(void)
 {
-	struct config *cfg = conf_config();
-	uint32_t srate = cfg->audio.srate_play;
 	int err;
 
 	sip_ua = uag_find_param("b2bua", "inbound");
@@ -896,11 +831,6 @@ static int module_init(void)
 		warning("sync_b2bua: inbound UA not found\n");
 		return ENOENT;
 	}
-
-	/* Allocate device hash table */
-	err = hash_alloc(&sync_ht_device, HASH_SIZE);
-	if (err)
-		return err;
 
 	/*
 	 * Allocate session hash table
@@ -927,23 +857,6 @@ static int module_init(void)
 	/* The inbound UA will handle all non-matching requests */
 	ua_set_catchall(sip_ua, true);
 
-	/* Register the mixer source and player */
-	err = ausrc_register(&ausrc, baresip_ausrcl(), "aumix",
-			  sync_src_alloc);
-	err |= auplay_register(&auplay, baresip_auplayl(),
-			  "aumix", sync_play_alloc);
-	if (err) {
-		return err;
-	}
-
-	/* Start audio mixer */
-	err = aumix_alloc(&mixer, srate ? srate : 48000,
-			  1 /* channels */, 20 /* ptime */);
-	if (err) {
-		warning("aumix\n");
-		return err;
-	}
-
 	debug("sync_b2bua: module loaded\n");
 
 	return 0;
@@ -953,14 +866,6 @@ static int module_init(void)
 static int module_close(void)
 {
 	debug("sync_b2bua: module closing..\n");
-
-	mem_deref(auplay);
-	mem_deref(ausrc);
-
-	auplay = NULL;
-	ausrc = NULL;
-
-	sync_ht_device = mem_deref(sync_ht_device);
 
 	hash_clear(ht_session_by_sip_callid);
 	ht_session_by_sip_callid = mem_deref(ht_session_by_sip_callid);
@@ -977,8 +882,6 @@ static int module_close(void)
 	info("sync_b2bua: flushing %u mixer sources\n",
 			list_count(&mixer_sourcel));
 	list_flush(&mixer_sourcel);
-
-	mem_deref(mixer);
 
 	uag_event_unregister(ua_event_handler);
 	cmd_unregister(baresip_commands(), cmdv);

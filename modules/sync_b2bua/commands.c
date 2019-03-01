@@ -16,7 +16,8 @@ static int request_decode(struct odict **od, const char *param)
 	int err;
 
 	/* Retrieve command params */
-	err = json_decode_odict(od, HASH_SIZE, param, str_len(param), MAX_DEPTH);
+	err = json_decode_odict(od, HASH_SIZE, param, str_len(param),
+			  MAX_DEPTH);
 	if (err)
 		warning("sync_b2bua: failed to decode JSON (%m)\n", err);
 
@@ -590,6 +591,7 @@ static int cmd_mixer_play(struct re_printf *pf, void *arg)
 	const char *param = carg->prm;
 	struct odict *od;
 	const char *file;
+	char buf[256];
 	int err;
 
 	(void)pf;
@@ -606,7 +608,10 @@ static int cmd_mixer_play(struct re_printf *pf, void *arg)
 		goto out;
 	}
 
-	err = sync_mixer_play(file);
+	re_snprintf(buf, sizeof(buf), "aumix_playfile %s", file);
+
+	err = cmd_process_long(baresip_commands(), buf, str_len(buf), pf,
+			  NULL);
 
  out:
 	mem_deref(od);
